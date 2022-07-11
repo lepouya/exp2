@@ -1,0 +1,17 @@
+doctype strict
+html: head
+  meta(http-equiv="Content-Type" content="text/html; charset=UTF-8")
+  meta(name="viewport" content="width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no")
+
+  - const package = require("../package.json")
+  - const pretty = x => x.replace(/\W/g, ' ').replace(/(?:^|\s)\S/g, c=>c.toUpperCase())
+  title=`${pretty(package.name)} v${package.version}`
+  meta(name="author" content=package.author)
+  meta(name="description" content=package.description)
+  script globalThis.gamePackage = {name: "#{package.name}", version: "#{package.version}"}
+
+  link(rel="icon" type="image/svg+xml" href="/icons/favicon.svg")
+  link(rel="icon" type="image/png" href="/icons/favicon.png")
+
+  link(rel="stylesheet" href=require("index.scss"))
+  script(src=require("index.tsx"))

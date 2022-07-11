@@ -1,0 +1,13 @@
+@use "./Theme";
+
+#icon {
+  width: 0;
+  height: 0;
+  display: none;
+  visibility: hidden;
+}
+
+.icon {
+  pointer-events: none;
+  stroke-width: 2;
+}

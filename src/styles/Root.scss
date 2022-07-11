@@ -1,0 +1,22 @@
+@use "./Theme";
+
+:root {
+  @extend [theme];
+}
+
+html,
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  font-weight: var(--font-weight);
+
+  line-height: 1;
+  text-rendering: optimizeLegibility;
+
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+
+  color: Theme.color(primary);
+  @include Theme.background($secondary: 100%);
+}

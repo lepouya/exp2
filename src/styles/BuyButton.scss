@@ -1,0 +1,41 @@
+@use "./Theme";
+
+button.buy-button {
+  width: 100%;
+
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  align-items: center;
+  align-content: flex-start;
+  white-space: nowrap;
+
+  .resource {
+    flex-wrap: nowrap;
+  }
+}
+
+button.buy-amount-button {
+  margin: 2px;
+  padding: 2px;
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+
+  &.selected {
+    @include Theme.background($positive: 20%, $secondary: 100%);
+  }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    margin: 0;
+
+    display: inline-block;
+    align-items: center;
+    vertical-align: middle;
+  }
+}

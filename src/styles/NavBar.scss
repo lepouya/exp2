@@ -1,0 +1,55 @@
+@use "./Theme";
+
+.navbar {
+  display: flex;
+  flex-flow: row wrap;
+  position: relative;
+
+  @include Theme.background($primary: 7%, $secondary: 100%);
+  color: Theme.color(primary);
+
+  @media only screen and (max-device-width: 640px) {
+    font-size: smaller;
+  }
+
+  > div {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .left {
+    justify-content: flex-start;
+  }
+
+  .right {
+    justify-content: flex-end;
+  }
+
+  .spacer {
+    flex: 9 0;
+  }
+
+  .active {
+    @include Theme.background($neutral: 15%);
+  }
+
+  a {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+
+    padding: 0 15px;
+    column-gap: 0.25em;
+    min-height: 2em;
+    box-sizing: border-box;
+
+    color: inherit;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: 0.25s ease-in-out;
+    transition-property: color, background-color;
+  }
+}

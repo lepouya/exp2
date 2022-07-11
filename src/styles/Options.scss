@@ -1,0 +1,86 @@
+@use "./Theme";
+
+.options {
+  font-family: var(--font-fixed);
+
+  gap: 10px 0;
+  margin-bottom: 10px;
+
+  .themed {
+    width: 75%;
+
+    button {
+      width: 100%;
+      padding: 0.5rem;
+    }
+  }
+
+  input {
+    font-family: var(--font-fixed);
+
+    &[type="button"] {
+      font-size: larger;
+      font-weight: bolder;
+
+      white-space: normal;
+      word-wrap: normal;
+
+      width: 75%;
+      padding: 1em;
+    }
+
+    &[type="range"] {
+      width: 100%;
+    }
+  }
+
+  textarea {
+    width: 100%;
+    height: 5em;
+    margin: 0 1em;
+
+    color: Theme.color(primary);
+    @include Theme.background($secondary: 100%);
+
+    border: 1px solid Theme.color(primary, 66%);
+    border-radius: 0.5em;
+  }
+
+  &.reset {
+    .warning {
+      color: Theme.color(negative);
+    }
+
+    label {
+      color: Theme.color(primary, 50%);
+    }
+
+    input {
+      &[type="button"] {
+        font-size: smaller;
+
+        color: Theme.color(negative);
+
+        width: auto;
+        padding: 1ex 1em;
+      }
+    }
+  }
+
+  .resource {
+    margin: 0;
+    padding: 0;
+
+    div {
+      max-width: fit-content;
+      white-space: normal;
+    }
+  }
+
+  &.debug {
+    .full {
+      font-size: smaller;
+      white-space: pre;
+    }
+  }
+}

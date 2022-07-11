@@ -1,0 +1,86 @@
+@use "./Theme";
+
+.resource {
+  width: 100%;
+  margin: auto;
+  padding: 2px;
+
+  display: inline-flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  align-content: flex-start;
+
+  .zero {
+    color: Theme.color(neutral);
+  }
+  .positive {
+    color: Theme.color(positive);
+  }
+  .negative {
+    color: Theme.color(negative);
+  }
+
+  > div {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+
+    + div {
+      padding-inline-start: 1ex;
+    }
+  }
+
+  > .break {
+    flex: 0 9 100%;
+  }
+
+  > .name,
+  > .extra-name {
+    justify-content: flex-end;
+    flex: 0 1 25%;
+    padding-inline-start: 0;
+  }
+
+  > .value,
+  > .extra-value {
+    justify-content: flex-start;
+    flex: 3 0 auto;
+  }
+
+  > .raw-value {
+    justify-content: flex-start;
+    flex: 2 0 auto;
+  }
+
+  > .rate {
+    justify-content: flex-end;
+    flex: 2 0 auto;
+  }
+
+  > .extra-name,
+  > .extra-value {
+    color: Theme.color(primary, 75%);
+    font-size: smaller;
+  }
+}
+
+.value-first {
+  .prefix {
+    order: 1;
+  }
+
+  .value {
+    order: 2;
+    padding-inline-start: 0.5ex;
+  }
+
+  .name {
+    order: 3;
+    padding-inline: 0.5ex;
+  }
+
+  .suffix {
+    order: 4;
+  }
+}
