@@ -6,20 +6,20 @@ import useGameContext from "./GameContext";
 import Spinner from "./Spinner";
 
 export default function Loader() {
-  const { context, load } = useGameContext();
+  const context = useGameContext();
   const [isLoaded, setLoaded] = useState(false);
   const [isFailed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!isLoaded && !isFailed) {
-      setTimeout(initialize, 1);
+      setTimeout(initialize, 1000.0 / context.settings.ticksPerSecond);
     }
   }, [isLoaded, isFailed]);
 
   function initialize() {
     try {
       context.init();
-      load();
+      context.load();
       setLoaded(true);
     } catch (ex) {
       setFailed(true);
