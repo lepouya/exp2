@@ -61,7 +61,7 @@ export type Resource<Context = any, TickResult = any> = {
   autoAward?: boolean;
 
   onPurchase?: (purchase: PurchaseCost<Context, TickResult>) => void;
-  onChange?: (count: DecimalSource, source?: string) => TickResult;
+  onChange?: (count: DecimalSource, source: string) => TickResult;
 
   execution: {
     lastTick?: number;
@@ -104,9 +104,24 @@ export type ResourceManager<Context = any, TickResult = any> = {
   canAfford: (cost: ResourceCount<Context, TickResult>[]) => boolean;
 
   update: (now?: number, source?: string) => TickResult[];
+  onUpdateComplete?: (
+    changes: Record<string, Decimal>,
+    dt: number,
+    source: string,
+  ) => TickResult;
 
   gainMultiplier?: (m: DecimalSource) => DecimalSource;
   costMultiplier?: (m: DecimalSource) => DecimalSource;
+
+  execution: Record<
+    string,
+    {
+      lastTick: number;
+      lastDelta: number;
+      lastResult: TickResult[];
+      lastChanges: Record<string, Decimal>;
+    }
+  >;
 };
 
 export type ResourceCount<Context = any, TickResult = any> = {
@@ -203,6 +218,7 @@ export function genResourceManager<Context, TickResult>(
     ) => purchase(rm, toBuy, style, gainMultiplier, costMultiplier),
     canAfford: (cost) => canAfford(rm, cost),
     update: (now, source) => update(rm, now ?? Date.now(), source ?? "unknown"),
+    execution: {},
   };
 
   return setSaveProperties(rm, ["resources"]);
@@ -283,13 +299,11 @@ function update<Context, TickResult>(
   });
 
   const resources = Object.values(rm.resources).filter(
-    (res) => res.unlocked ?? true,
+    (res) => (res.unlocked ?? true) && !res.disabled,
   );
 
   resources.forEach((res) => {
-    if (res.onChange) {
-      cache[res.name] = res.count;
-    }
+    cache[res.name] = res.count;
 
     res.rate.lastCountUpdate ??= epoch;
     res.rate.lastCount ??= res.count;
@@ -302,7 +316,7 @@ function update<Context, TickResult>(
   });
 
   const results: Record<string, TickResult[]> = {};
-  const tickResources = resources.filter((res) => res.tick && !res.disabled);
+  const tickResources = resources.filter((res) => res.tick);
   const tickScale = 1 / 1000 / timeDilation;
   while (dt > 0) {
     dt -= clamp(dt, minResourceUpdateSecs, maxResourceTickSecs);
@@ -330,6 +344,28 @@ function update<Context, TickResult>(
   }
 
   resources.forEach((res) => {
+    if (
+      res.autoAward &&
+      !res.disabled &&
+      res.count.lessThan(res.maxCount ?? Decimal.dZero)
+    ) {
+      const req = res.cost(res.count.add(1));
+      if (canAfford(rm, req, false)) {
+        res.count = res.count.add(1);
+
+        if (res.onPurchase) {
+          res.onPurchase({
+            count: Decimal.dOne,
+            style: "free",
+            gain: [{ resource: res, count: Decimal.dOne }],
+            cost: [],
+          });
+        }
+      }
+    }
+  });
+
+  resources.forEach((res) => {
     const rateDt = (now - (res.rate.lastCountUpdate ?? 0)) / 1000;
     if (
       res.rate.lastCountUpdate == undefined ||
@@ -355,47 +391,41 @@ function update<Context, TickResult>(
       res.rate.pastTicks.unshift(res.rate.ticks);
       res.rate.pastTicks.splice(rateHistoryWindow);
     }
-
-    if (res.onChange) {
-      if (res.count.notEquals(cache[res.name])) {
-        const changeResult = res.onChange(res.count, source);
-        if (changeResult && !results[res.name].includes(changeResult)) {
-          results[res.name].push(changeResult);
-        }
-      }
-    }
   });
 
   resources.forEach((res) => {
-    if (
-      res.autoAward &&
-      !res.disabled &&
-      res.count.lessThan(res.maxCount ?? Decimal.dZero)
-    ) {
-      const req = res.cost(res.count.add(1));
-      if (canAfford(rm, req, false)) {
-        res.count = res.count.add(1);
+    cache[res.name] = res.count.minus(cache[res.name] ?? Decimal.dZero);
+    if (cache[res.name].equals(Decimal.dZero)) {
+      delete cache[res.name];
+    }
 
-        if (res.onPurchase) {
-          res.onPurchase({
-            count: Decimal.dOne,
-            style: "free",
-            gain: [{ resource: res, count: Decimal.dOne }],
-            cost: [],
-          });
-        }
-
-        if (res.onChange) {
-          const changeResult = res.onChange(res.count, source);
-          if (changeResult && !results[res.name].includes(changeResult)) {
-            results[res.name].push(changeResult);
-          }
-        }
+    if (res.onChange && cache[res.name]) {
+      const changeResult = res.onChange(res.count, source);
+      if (changeResult && !results[res.name].includes(changeResult)) {
+        results[res.name].push(changeResult);
       }
     }
   });
 
-  return dedupe(Object.values(results).flat());
+  if (rm.onUpdateComplete) {
+    const updateResult = rm.onUpdateComplete(
+      cache,
+      (now - epoch) / 1000,
+      source,
+    );
+    if (updateResult) {
+      results["__ResourceManager_onUpdateComplete"] = [updateResult];
+    }
+  }
+
+  rm.execution[source] = {
+    lastTick: now,
+    lastDelta: (now - epoch) / 1000,
+    lastResult: dedupe(Object.values(results).flat()),
+    lastChanges: cache,
+  };
+
+  return rm.execution[source].lastResult;
 }
 
 function purchase<Context, TickResult>(
