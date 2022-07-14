@@ -85,9 +85,9 @@ export type Resource<Context = any, TickResult = any> = {
 };
 
 export type ResourceManager<Context = any, TickResult = any> = {
-  context: Context;
-  settings: Partial<Settings>;
-  resources: Record<string, Resource<Context, TickResult>>;
+  readonly context: Context;
+  readonly settings: Partial<Settings>;
+  readonly resources: Record<string, Resource<Context, TickResult>>;
 
   upsert: (
     props: Partial<Resource<Context, TickResult>> | string,

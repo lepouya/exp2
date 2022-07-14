@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
 
 import Main from "../pages/Main";
+import NuxRoot from "../pages/NuxRoot";
 import Options from "../pages/Options";
 import { setTheme } from "../utils/document";
 import useGameContext from "./GameContext";
@@ -59,7 +60,7 @@ export default function Game() {
 
   return (
     <HashRouter>
-      <nav className="navbar">
+      <nav id="navbar">
         <div className="left">
           <Link to="/">Main</Link>
         </div>
@@ -68,6 +69,7 @@ export default function Game() {
           <Link to="/options">Settings</Link>
         </div>
       </nav>
+      <NuxRoot />
       <Routes>
         <Route path="/" element={<Main />} />
         <Route path="/options" element={<Options />} />

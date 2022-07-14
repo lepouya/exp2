@@ -15,7 +15,7 @@
     flex: 0 1 auto;
   }
 
-  > div:not(.tutorial) {
+  > div:not(#nux-root) {
     flex: 1 1 auto;
     overflow: hidden auto;
   }

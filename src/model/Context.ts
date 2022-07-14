@@ -1,12 +1,14 @@
 import assign from "../utils/assign";
 import * as LocalStore from "../utils/localStorage";
 import * as Store from "../utils/store";
+import { genNuxManager, NuxManager } from "./Nux";
 import { genResourceManager, Resource, ResourceManager } from "./Resource";
 import { defaultSettings, Settings } from "./Settings";
 
 export type Context<TickResult = any> = {
   settings: Settings;
   resourceManager: ResourceManager<Context<TickResult>, TickResult>;
+  nuxManager: NuxManager<Context<TickResult>>;
 
   init: (this: Context<TickResult>) => void;
 };
@@ -24,9 +26,15 @@ export function emptyContext<TickResult>(
     lastLoaded: Date.now(),
   };
   context.resourceManager = genResourceManager(context, context.settings);
+  context.nuxManager ??= genNuxManager(context);
+  context.nuxManager.currentStates = {};
 
   context.init();
-  return Store.setSaveProperties(context, ["settings", "resourceManager"]);
+  return Store.setSaveProperties(context, [
+    "settings",
+    "resourceManager",
+    "nuxManager",
+  ]);
 }
 
 export function wrapContext<TickResult>(context: Context<TickResult>) {
@@ -69,6 +77,15 @@ function _load<TickResult>(
     Object.values(newContext.resourceManager.resources || {}).forEach((res) =>
       context.resourceManager.upsert(res),
     );
+
+    let nuxKey: keyof typeof newContext.nuxManager.currentStates;
+    for (nuxKey in newContext.nuxManager.currentStates) {
+      assign(
+        context.nuxManager.currentStates,
+        nuxKey,
+        newContext.nuxManager.currentStates[nuxKey],
+      );
+    }
 
     context.settings.lastLoaded = Date.now();
     context.resourceManager.update(undefined, "load");
