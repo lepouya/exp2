@@ -33,7 +33,7 @@ export const defaultSettings: Settings = {
   rateUpdateSecs: 1,
   rateHistoryWindow: 3,
   minResourceUpdateSecs: 0.001,
-  maxResourceUpdateSecs: 24 * 60 * 40,
+  maxResourceUpdateSecs: 24 * 60 * 60,
   maxResourceTickSecs: 1,
 
   lastReset: Date.now(),
