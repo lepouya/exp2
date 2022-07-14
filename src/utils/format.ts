@@ -155,6 +155,6 @@ export function word(
   } else {
     return (word ?? "")
       .replace(/([a-z])([A-Z]|_\S)/g, (_, c1, c2) => `${c1} ${c2.slice(-1)}`)
-      .replace(/(?<=^|\s)\w(?=\w)/g, (c) => c.toUpperCase());
+      .replace(/(?:^|\s)\w(?=\w)/g, (c) => c.toUpperCase());
   }
 }
