@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 
 import useGameContext from "../components/GameContext";
 import toast from "../components/Toast";
-import themeData from "../data/themes.json";
+import { themes } from "../data/themes";
 import { setTheme } from "../utils/document";
 import { loadFromFile, saveToFile } from "../utils/fileStorage";
 import * as Format from "../utils/format";
@@ -18,7 +18,6 @@ export default function Options() {
   const location = useLocation();
 
   const settings = context.settings;
-  const themes = themeData as Record<string, string>;
   const debug = location.search.toLowerCase().includes("debug");
 
   function saveGame() {

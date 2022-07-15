@@ -1,4 +1,4 @@
-import messages from "../data/messages.json";
+import { messages } from "../data/messages";
 
 export default function message(key: string, index?: number): string {
   const msgs = messages[key as keyof typeof messages];
