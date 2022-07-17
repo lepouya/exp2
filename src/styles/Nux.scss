@@ -13,7 +13,7 @@
     padding: 0 0.5em 2em;
     gap: 1ex 0;
 
-    @include Theme.background($primary: 7%, $secondary: 100%);
+    @include Theme.background($positive: 7%, $secondary: 100%);
   }
 
   a {

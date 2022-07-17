@@ -407,6 +407,13 @@ function update<Context, TickResult>(
     }
   });
 
+  rm.execution[source] = {
+    lastTick: now,
+    lastDelta: (now - epoch) / 1000,
+    lastResult: dedupe(Object.values(results).flat()),
+    lastChanges: cache,
+  };
+
   if (rm.onUpdateComplete) {
     const updateResult = rm.onUpdateComplete(
       cache,
@@ -417,13 +424,6 @@ function update<Context, TickResult>(
       results["__ResourceManager_onUpdateComplete"] = [updateResult];
     }
   }
-
-  rm.execution[source] = {
-    lastTick: now,
-    lastDelta: (now - epoch) / 1000,
-    lastResult: dedupe(Object.values(results).flat()),
-    lastChanges: cache,
-  };
 
   return rm.execution[source].lastResult;
 }

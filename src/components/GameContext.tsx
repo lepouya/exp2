@@ -3,6 +3,7 @@ import { createContext, PropsWithChildren, useContext } from "react";
 import { emptyContext, wrapContext } from "../model/Context";
 import genDerivatives from "../model/Derivatives";
 import { compileAllResources } from "../model/Resource";
+import registerOfflineSummary from "./OfflineSummary";
 
 const context = emptyContext<boolean>();
 const GameReactContext = createContext(context);
@@ -20,13 +21,18 @@ export default function useGameContext() {
 }
 
 const _load_resources: any[] = [];
+const _load_nuxes: any[] = [];
 
 Object.assign(context, {
   init: function (this: typeof context) {
-    genDerivatives(this, "x", 100);
+    genDerivatives(this, "x", 8);
+    registerOfflineSummary(this);
+
     _load_resources
       .flat()
       .forEach((props: any) => this.resourceManager.upsert(props));
     compileAllResources(this.resourceManager);
+
+    _load_nuxes.flat().forEach((props: any) => this.nuxManager.register(props));
   },
 });

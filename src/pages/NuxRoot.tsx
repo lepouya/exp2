@@ -3,31 +3,11 @@ import { MouseEvent, useEffect } from "react";
 import useGameContext from "../components/GameContext";
 import { Nux } from "../model/Nux";
 import apply from "../utils/apply";
-import { Nullable } from "../utils/types";
+import { Nullable, Optional } from "../utils/types";
 
 export default function NuxRoot() {
   const { nuxManager } = useGameContext();
-
-  const nux = Object.keys(nuxManager.currentStates)
-    .sort(
-      (a, b) =>
-        (nuxManager.currentStates[b].priority ?? 0) -
-        (nuxManager.currentStates[a].priority ?? 0),
-    )
-    .reduce(function (showNux, curNux) {
-      if (showNux) {
-        return showNux;
-      }
-      const nux = nuxManager.resolve(
-        curNux,
-        nuxManager.currentStates[curNux].step,
-      );
-      if (nux && nux.enabled) {
-        return nux;
-      } else {
-        return undefined;
-      }
-    }, undefined as Nux | undefined);
+  const nux = nuxManager.genCurrentNux();
 
   useEffect(() => {
     const onMount = nux?.onMount;
@@ -55,28 +35,30 @@ export default function NuxRoot() {
   if (!nux) {
     return null;
   }
-
-  function validNux(name?: string, step?: number) {
+  function validNux(otherNux: Optional<Nux>) {
     return (
-      name != null &&
-      step != null &&
-      name != "" &&
-      !isNaN(step) &&
-      isFinite(step) &&
-      !(name === nux?.name && step === nux?.step)
+      otherNux?.name != null &&
+      otherNux?.step != null &&
+      otherNux?.name != "" &&
+      !isNaN(otherNux?.step) &&
+      isFinite(otherNux?.step) &&
+      !(otherNux?.name == nux?.name && otherNux?.step == nux?.step)
     );
   }
 
-  function gotoNux(name?: string, step?: number, event?: MouseEvent) {
+  function gotoNux(nextNux: Optional<Nux>, event?: MouseEvent) {
     event?.preventDefault();
 
     const priority =
-      name && name === nux?.name
-        ? nuxManager.currentStates[name ?? ""].priority
+      nextNux?.name && nextNux?.name === nux?.name
+        ? nuxManager.currentStates[nux?.name ?? ""].priority
         : undefined;
     delete nuxManager.currentStates[nux?.name ?? ""];
-    if (validNux(name, step)) {
-      nuxManager.currentStates[name ?? ""] = { step, priority };
+    if (validNux(nextNux)) {
+      nuxManager.currentStates[nextNux?.name!] = {
+        step: nextNux?.step!,
+        priority,
+      };
     }
   }
 
@@ -97,26 +79,30 @@ export default function NuxRoot() {
       <div className="panel shadow" style={{ minHeight: nux.bounds.height }}>
         {nux.title && <div className="title-bar">{nux.title}</div>}
         {nux.body}
-        {validNux(nux.prevName, nux.prevStep) &&
-          !(nux.prevName === nux.nextName && nux.prevStep === nux.nextStep) && (
+        {validNux(nux.prev) &&
+          !(
+            nux.prev?.name === nux.next?.name &&
+            nux.prev?.step === nux.next?.step
+          ) && (
             <div className="prev">
-              <a href="" onClick={apply(gotoNux, nux.prevName, nux.prevStep)}>
-                {nux.prevTitle}
+              <a href="" onClick={apply(gotoNux, nux.prev)}>
+                {nux.prev?.title ?? "< back"}
               </a>
             </div>
           )}
-        {validNux(nux.nextName, nux.nextStep) && (
-          <div className="next">
-            <a href="" onClick={apply(gotoNux, nux.nextName, nux.nextStep)}>
-              {nux.nextTitle}
-            </a>
-          </div>
-        )}
-        {validNux(nux.skipName, nux.skipStep) &&
-          !(nux.skipName === nux.nextName && nux.skipStep === nux.nextStep) && (
+        <div className="next">
+          <a href="" onClick={apply(gotoNux, nux.next)}>
+            {nux.next?.title ?? (nux.next?.step ? "next >" : "done")}
+          </a>
+        </div>
+        {validNux(nux.skip) &&
+          !(
+            nux.skip?.name === nux.next?.name &&
+            nux.skip?.step === nux.next?.step
+          ) && (
             <div className="skip">
-              <a href="" onClick={apply(gotoNux, nux.skipName, nux.skipStep)}>
-                {nux.skipTitle}
+              <a href="" onClick={apply(gotoNux, nux.skip)}>
+                {nux.skip?.title ?? "skip >>>"}
               </a>
             </div>
           )}

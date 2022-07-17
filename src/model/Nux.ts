@@ -1,6 +1,7 @@
 import assign from "../utils/assign";
 import generate, { Generative } from "../utils/generate";
 import { setSaveProperties } from "../utils/store";
+import { Optional } from "../utils/types";
 
 export type Nux = {
   readonly name: string;
@@ -11,18 +12,13 @@ export type Nux = {
   title: string | JSX.Element;
   body: string | JSX.Element;
 
-  prevName: string;
-  prevStep: number;
-  prevTitle: string | JSX.Element;
-  nextName: string;
-  nextStep: number;
-  nextTitle: string | JSX.Element;
-  skipName: string;
-  skipStep: number;
-  skipTitle: string | JSX.Element;
+  prev: Optional<Nux>;
+  next: Optional<Nux>;
+  skip: Optional<Nux>;
 
   highlightSelector: string;
   greyOut: boolean;
+
   bounds: {
     left: string;
     top: string;
@@ -36,16 +32,17 @@ export type Nux = {
 
 export type NuxManager<Context> = {
   readonly context: Context;
-  readonly nuxes: Record<
-    string,
-    Record<number, Generative<Nux, [NuxManager<Context>]>>
-  >;
+  readonly nuxes: Record<string, Record<number, NuxGenerator<Context>>>;
 
   currentStates: Record<string, { step?: number; priority?: number }>;
 
-  register: (nux: Generative<Nux, [NuxManager<Context>]>) => void;
+  register: (...nuxes: NuxGenerator<Context>[]) => void;
   resolve: (name?: string, step?: number) => Nux | undefined;
+
+  genCurrentNux: () => Nux | undefined;
 };
+
+export type NuxGenerator<Context> = Generative<Nux, [NuxManager<Context>]>;
 
 export function genNuxManager<Context>(context: Context): NuxManager<Context> {
   const nm: NuxManager<Context> = {
@@ -53,15 +50,17 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
     nuxes: {},
     currentStates: {},
 
-    register(nux: Generative<Nux, [NuxManager<Context>]>) {
-      const res = generate(nux, { name: "", step: 0 }, nm);
-      if (!nm.nuxes[res.name ?? ""]) {
-        nm.nuxes[res.name ?? ""] = {};
-      }
-      assign(nm.nuxes[res.name ?? ""], res.step ?? 0, nux);
+    register(...nuxes) {
+      nuxes.forEach((nux) => {
+        const res = generate(nux, { name: "", step: 0 }, nm);
+        if (!nm.nuxes[res.name ?? ""]) {
+          nm.nuxes[res.name ?? ""] = {};
+        }
+        assign(nm.nuxes[res.name ?? ""], res.step ?? 0, nux);
+      });
     },
 
-    resolve(name: string = "", step: number = 0) {
+    resolve(name = "", step = 0) {
       const nux = (nm.nuxes[name] ?? {})[step];
       if (!nux) {
         return undefined;
@@ -73,29 +72,31 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
       const stepIdx = sortedSteps.indexOf(step);
       const prevIdx = sortedSteps[stepIdx - 1];
       const nextIdx = sortedSteps[stepIdx + 1];
-      const skipIdx = Math.floor(1 + stepIdx / 100) * 100;
+      const skipIdx = (1 + Math.floor(step / 100)) * 100;
 
       const res = generate(
         nux,
         {
           name,
           step,
-
           enabled: true,
-
           title: `${name} #${step}`,
           body: "...",
-
-          prevName: name,
-          prevStep: prevIdx ?? step,
-          prevTitle: "< back",
-          nextName: name,
-          nextStep: nextIdx ?? skipIdx,
-          nextTitle: nextIdx ? "next >" : "done",
-          skipName: name,
-          skipStep: skipIdx,
-          skipTitle: "skip >>>",
-
+          prev: {
+            name,
+            step: prevIdx ?? step,
+            title: "< back",
+          },
+          next: {
+            name,
+            step: nextIdx ?? skipIdx,
+            title: nextIdx ? "next >" : "done",
+          },
+          skip: {
+            name,
+            step: skipIdx,
+            title: "skip >>>",
+          },
           highlightSelector: "",
           greyOut: false,
           bounds: {
@@ -109,6 +110,26 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
       );
 
       return res;
+    },
+
+    genCurrentNux() {
+      return Object.keys(nm.currentStates)
+        .sort(
+          (a, b) =>
+            (nm.currentStates[b].priority ?? 0) -
+            (nm.currentStates[a].priority ?? 0),
+        )
+        .reduce(function (showNux, curNux) {
+          if (showNux) {
+            return showNux;
+          }
+          const nux = nm.resolve(curNux, nm.currentStates[curNux].step);
+          if (nux && nux.enabled) {
+            return nux;
+          } else {
+            return undefined;
+          }
+        }, undefined as Nux | undefined);
     },
   };
 
