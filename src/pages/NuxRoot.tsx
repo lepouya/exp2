@@ -2,7 +2,7 @@ import { MouseEvent, useEffect } from "react";
 
 import useGameContext from "../components/GameContext";
 import { Nux } from "../model/Nux";
-import apply from "../utils/apply";
+import Fn from "../utils/function";
 import { Nullable, Optional } from "../utils/types";
 
 export default function NuxRoot() {
@@ -85,13 +85,13 @@ export default function NuxRoot() {
             nux.prev?.step === nux.next?.step
           ) && (
             <div className="prev">
-              <a href="" onClick={apply(gotoNux, nux.prev)}>
+              <a href="" onClick={Fn.apply(gotoNux, nux.prev)}>
                 {nux.prev?.title ?? "< back"}
               </a>
             </div>
           )}
         <div className="next">
-          <a href="" onClick={apply(gotoNux, nux.next)}>
+          <a href="" onClick={Fn.apply(gotoNux, nux.next)}>
             {nux.next?.title ?? (nux.next?.step ? "next >" : "done")}
           </a>
         </div>
@@ -101,7 +101,7 @@ export default function NuxRoot() {
             nux.skip?.step === nux.next?.step
           ) && (
             <div className="skip">
-              <a href="" onClick={apply(gotoNux, nux.skip)}>
+              <a href="" onClick={Fn.apply(gotoNux, nux.skip)}>
                 {nux.skip?.title ?? "skip >>>"}
               </a>
             </div>

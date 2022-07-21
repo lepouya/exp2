@@ -1,4 +1,41 @@
-export function compileInlineFunction<A extends any[], R>(
+export default function Fn() {
+  return Fn;
+}
+
+Fn.apply = function <T extends unknown[], U extends unknown[], R>(
+  fn: (..._: [...T, ...U]) => R,
+  ...front: T
+) {
+  return (...tail: U) => fn(...front, ...tail);
+};
+
+Fn.compose = function <T extends ((_: any) => any)[]>(...fns: T) {
+  return (
+    args: T extends [..._: any, _: (_: infer P) => any] ? P : never,
+  ): T[0] extends (_: any) => infer R ? R : never =>
+    fns.reduceRight((val: any, fn: any) => fn(val), args);
+};
+
+Fn.chain = function <T extends ((_: any) => any)[]>(...fns: T) {
+  return (
+    args: T[0] extends Function ? Parameters<T[0]> : never,
+  ): T extends [..._: any, _: (_: any) => infer R] ? R : never =>
+    fns.reduce((val: any, fn: any) => fn(val), args);
+};
+
+Fn.map = function <P extends unknown[], R>(...fns: ((..._: P) => R)[]) {
+  return (...args: P): R[] => fns.map((fn) => fn(...args));
+};
+
+Fn.mapReduce = function <P extends unknown[], R, F>(
+  reduce: (_: R[]) => F,
+  ...fns: ((..._: P) => R)[]
+) {
+  const map = Fn.map(...fns);
+  return (...args: P): F => reduce(map(...args));
+};
+
+Fn.compile = function <A extends unknown[], R = unknown>(
   body: string,
   thisBind?: any,
   args: string[] = [],
@@ -51,7 +88,7 @@ export function compileInlineFunction<A extends any[], R>(
 
   if (typeof fn !== "function") {
     if (!forceArgs) {
-      return compileInlineFunction(
+      return Fn.compile(
         body,
         thisBind,
         args,
@@ -66,4 +103,4 @@ export function compileInlineFunction<A extends any[], R>(
   } else {
     return fn;
   }
-}
+};

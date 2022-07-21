@@ -1,10 +1,9 @@
 import Decimal, { DecimalSource } from "break_eternity.js";
 
-import apply from "../utils/apply";
 import assign from "../utils/assign";
 import clamp from "../utils/clamp";
-import { compileInlineFunction } from "../utils/compiler";
 import dedupe from "../utils/dedupe";
+import Fn from "../utils/function";
 import { setSaveProperties } from "../utils/store";
 import tickTimer from "../utils/tickTimer";
 import { Nullable } from "../utils/types";
@@ -687,16 +686,16 @@ export function compileAllResources<Context, TickResult>(
   rm: ResourceManager<Context, TickResult>,
 ) {
   Object.values(rm.resources).forEach((res) => {
-    const resourceContext = {
+    const ctx = {
       ...res.manager.context,
       ...res.manager,
       ...res.manager.resources,
       ...Decimal,
-      timer: apply(tickTimer, res),
+      timer: Fn.apply(tickTimer, res),
     };
 
     if (typeof res.value === "string") {
-      res.value = compileInlineFunction(res.value, res, [], resourceContext);
+      res.value = Fn.compile(res.value, res, [], ctx);
     }
 
     if (typeof res.cost === "string") {
@@ -715,63 +714,28 @@ export function compileAllResources<Context, TickResult>(
           })
           .join(", ") +
         "]";
-      res.cost = compileInlineFunction(
-        costFunction,
-        res,
-        ["n"],
-        resourceContext,
-      );
+      res.cost = Fn.compile(costFunction, res, ["n"], ctx);
     }
 
     if (typeof res.shouldTick === "string") {
-      res.shouldTick = compileInlineFunction(
-        res.shouldTick,
-        res,
-        ["dt", "source"],
-        resourceContext,
-      );
+      res.shouldTick = Fn.compile(res.shouldTick, res, ["dt", "source"], ctx);
     }
     if (typeof res.tick === "string") {
-      res.tick = compileInlineFunction(
-        res.tick,
-        res,
-        ["dt", "source"],
-        resourceContext,
-      );
+      res.tick = Fn.compile(res.tick, res, ["dt", "source"], ctx);
     }
 
     if (typeof res.gainMultiplier === "string") {
-      res.gainMultiplier = compileInlineFunction(
-        res.gainMultiplier,
-        res,
-        ["m"],
-        resourceContext,
-      );
+      res.gainMultiplier = Fn.compile(res.gainMultiplier, res, ["m"], ctx);
     }
     if (typeof res.costMultiplier === "string") {
-      res.costMultiplier = compileInlineFunction(
-        res.costMultiplier,
-        res,
-        ["m"],
-        resourceContext,
-      );
+      res.costMultiplier = Fn.compile(res.costMultiplier, res, ["m"], ctx);
     }
 
     if (typeof res.onPurchase === "string") {
-      res.onPurchase = compileInlineFunction(
-        res.onPurchase,
-        res,
-        ["purchase"],
-        resourceContext,
-      );
+      res.onPurchase = Fn.compile(res.onPurchase, res, ["purchase"], ctx);
     }
     if (typeof res.onChange === "string") {
-      res.onChange = compileInlineFunction(
-        res.onChange,
-        res,
-        ["value", "source"],
-        resourceContext,
-      );
+      res.onChange = Fn.compile(res.onChange, res, ["value", "source"], ctx);
     }
   });
 }

@@ -2,8 +2,8 @@ import Decimal, { DecimalSource } from "break_eternity.js";
 import { MouseEvent, useState } from "react";
 
 import { Resource, ResourceCount } from "../model/Resource";
-import apply from "../utils/apply";
 import clamp from "../utils/clamp";
+import Fn from "../utils/function";
 import useGameContext from "./GameContext";
 import Icon from "./Icon";
 import ResourceRender from "./ResourceRender";
@@ -220,7 +220,7 @@ export default function BuyButton({
 
   return (
     <button
-      onClick={apply(
+      onClick={Fn.apply(
         doPurchase,
         active && enabled ? purchase.count : Decimal.dZero,
       )}

@@ -6,7 +6,6 @@
 - Separate unlock cost
 - Bring kind back to resourcecounts
 - Draw arcs for progess circle instead of dash array
-- Function chaining
 
 # Things to experiment with
 
