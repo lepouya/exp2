@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 
-import dedupe from "./dedupe";
+import Arr from "./arrays";
 
 let _skipEncoding = false;
 function _codec(s: string): string {
@@ -131,6 +131,6 @@ export function loadAs<T>(value: T, loadStr: string): boolean {
 export function setSaveProperties<T>(value: T, props: (keyof T)[]): T {
   const saveProperties = _save_properties(value);
   saveProperties.push(...props);
-  Object.assign(value, { _save_properties: dedupe(saveProperties) });
+  Object.assign(value, { _save_properties: Arr.dedupe(saveProperties) });
   return value;
 }

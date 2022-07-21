@@ -1,7 +1,7 @@
 import Decimal, { DecimalSource } from "break_eternity.js";
 
+import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
-import dedupe from "../utils/dedupe";
 import Fn from "../utils/function";
 import Obj from "../utils/objects";
 import { setSaveProperties } from "../utils/store";
@@ -409,7 +409,7 @@ function update<Context, TickResult>(
   rm.execution[source] = {
     lastTick: now,
     lastDelta: (now - epoch) / 1000,
-    lastResult: dedupe(Object.values(results).flat()),
+    lastResult: Arr.dedupe(Object.values(results).flat()),
     lastChanges: cache,
   };
 
