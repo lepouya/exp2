@@ -1,4 +1,4 @@
-import assign from "./assign";
+import Obj from "./objects";
 import { FunctionType, Optional } from "./types";
 
 export type Generator<T, Self = T, GenArgs extends unknown[] = []> =
@@ -23,7 +23,7 @@ export default function generate<
     let key: keyof T;
     for (key in generator) {
       let value = generator[key];
-      assign(
+      Obj.assign(
         generated,
         key,
         typeof value === "function" ? value(generated, ...args) : value,

@@ -8,7 +8,7 @@ import { setTheme } from "../utils/document";
 import { loadFromFile, saveToFile } from "../utils/fileStorage";
 import * as Format from "../utils/format";
 import formatWithNotation from "../utils/notation";
-import recordMap from "../utils/recordMap";
+import Obj from "../utils/objects";
 
 export default function Options() {
   const context = useGameContext();
@@ -49,9 +49,7 @@ export default function Options() {
   }
 
   function saveFile() {
-    const pkg = recordMap(globalThis.gamePackage, (s) =>
-      s?.replace(/\W/g, "_"),
-    );
+    const pkg = Obj.map(globalThis.gamePackage, (s) => s?.replace(/\W/g, "_"));
     const date = new Date()
       .toISOString()
       .replace(/\D/g, " ")

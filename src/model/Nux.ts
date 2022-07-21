@@ -1,5 +1,5 @@
-import assign from "../utils/assign";
 import generate, { Generative } from "../utils/generate";
+import Obj from "../utils/objects";
 import { setSaveProperties } from "../utils/store";
 import { Optional } from "../utils/types";
 
@@ -56,7 +56,7 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
         if (!nm.nuxes[res.name ?? ""]) {
           nm.nuxes[res.name ?? ""] = {};
         }
-        assign(nm.nuxes[res.name ?? ""], res.step ?? 0, nux);
+        Obj.assign(nm.nuxes[res.name ?? ""], res.step ?? 0, nux);
       });
     },
 

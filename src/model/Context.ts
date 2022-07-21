@@ -1,5 +1,5 @@
-import assign from "../utils/assign";
 import * as LocalStore from "../utils/localStorage";
+import Obj from "../utils/objects";
 import * as Store from "../utils/store";
 import { genNuxManager, NuxManager } from "./Nux";
 import { genResourceManager, Resource, ResourceManager } from "./Resource";
@@ -68,26 +68,17 @@ function _load<TickResult>(
 
   if (loaded) {
     context.init();
+    context.settings.lastLoaded = Date.now();
 
-    let settingsKey: keyof typeof newContext.settings;
-    for (settingsKey in newContext.settings) {
-      assign(context.settings, settingsKey, newContext.settings[settingsKey]);
-    }
+    Obj.copy(newContext.settings, context.settings);
+    Obj.copy(
+      newContext.nuxManager.currentStates,
+      context.nuxManager.currentStates,
+    );
 
     Object.values(newContext.resourceManager.resources || {}).forEach((res) =>
       context.resourceManager.upsert(res),
     );
-
-    let nuxKey: keyof typeof newContext.nuxManager.currentStates;
-    for (nuxKey in newContext.nuxManager.currentStates) {
-      assign(
-        context.nuxManager.currentStates,
-        nuxKey,
-        newContext.nuxManager.currentStates[nuxKey],
-      );
-    }
-
-    context.settings.lastLoaded = Date.now();
     context.resourceManager.update(undefined, "load");
   }
 

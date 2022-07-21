@@ -1,4 +1,4 @@
-import assign from "./assign";
+import Obj from "./objects";
 
 export function getHTMLElement(
   param: Partial<HTMLElement> | string,
@@ -13,7 +13,7 @@ export function getHTMLElement(
 
   let k: keyof HTMLElement;
   for (k in opts) {
-    assign(elem, k, opts[k]);
+    Obj.assign(elem, k, opts[k]);
   }
 
   return elem;

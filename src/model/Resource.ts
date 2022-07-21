@@ -1,9 +1,9 @@
 import Decimal, { DecimalSource } from "break_eternity.js";
 
-import assign from "../utils/assign";
 import clamp from "../utils/clamp";
 import dedupe from "../utils/dedupe";
 import Fn from "../utils/function";
+import Obj from "../utils/objects";
 import { setSaveProperties } from "../utils/store";
 import tickTimer from "../utils/tickTimer";
 import { Nullable } from "../utils/types";
@@ -244,7 +244,7 @@ function upsert<Context, TickResult>(
     let k: keyof Resource<Context, TickResult>;
     for (k in props) {
       if (k === "extra") {
-        assign(res, k, props[k]);
+        Obj.assign(res, k, props[k]);
       } else if (k === "count" || k === "maxCount" || k === "minCount") {
         if (props[k] != undefined) {
           res[k] = Decimal.fromValue(props[k]!);
