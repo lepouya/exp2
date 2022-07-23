@@ -9,9 +9,14 @@ Obj.assign = function <
 >(obj?: T, key?: Key, value?: Value) {
   const newObj: any = obj || {};
 
-  if (key && newObj[key] && value != null && typeof value === "object") {
+  if (
+    key != null &&
+    newObj[key] &&
+    value != null &&
+    typeof value === "object"
+  ) {
     newObj[key] = { ...newObj[key], ...value };
-  } else if (key && value != null) {
+  } else if (key != null && value != null) {
     newObj[key] = value;
   }
 

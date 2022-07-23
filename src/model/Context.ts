@@ -68,9 +68,10 @@ function _load<TickResult>(
 
   if (loaded) {
     context.init();
-    context.settings.lastLoaded = Date.now();
 
     Obj.copy(newContext.settings, context.settings);
+    context.settings.lastLoaded = Date.now();
+
     Obj.copy(
       newContext.nuxManager.currentStates,
       context.nuxManager.currentStates,
