@@ -29,6 +29,7 @@ export type Resource<Context = any, TickResult = any> = {
 
   value: () => Decimal;
   cost: (n: DecimalSource) => ResourceCount<Context, TickResult>[];
+  unlockCost?: () => ResourceCount<Context, TickResult>[];
 
   shouldTick?: (dt: number, source?: string) => boolean;
   tick?: (dt: number, source?: string) => Nullable<TickResult>;
@@ -295,7 +296,9 @@ function update<Context, TickResult>(
 
   Object.values(rm.resources).forEach((res) => {
     if (res.autoUnlock && !res.disabled && !(res.unlocked ?? true)) {
-      if (canAfford(rm, res.cost(1), false)) {
+      if (
+        canAfford(rm, res.unlockCost ? res.unlockCost() : res.cost(1), false)
+      ) {
         res.unlocked = true;
       }
     }
@@ -462,17 +465,21 @@ function purchase<Context, TickResult>(
       localCostMultiplier,
     );
 
-    if (style === "dry-partial" || style === "dry-full") {
+    if (style.includes("dry") || Decimal.eq(rcCost.count, 0)) {
       return rcCost;
     } else {
-      const gain = applyToResource(res, rcCost.gain),
-        cost = rcCost.cost
-          .map(({ resource, count }) =>
-            applyToResource(resolve(rm, resource), [
-              { resource, count: Decimal.fromValue(count).negate() },
-            ]),
-          )
-          .flat();
+      if (!(res.unlocked ?? true)) {
+        res.unlocked = true;
+      }
+
+      const gain = applyToResource(res, rcCost.gain);
+      const cost = rcCost.cost
+        .map(({ resource, count }) =>
+          applyToResource(resolve(rm, resource), [
+            { resource, count: Decimal.fromValue(count).negate() },
+          ]),
+        )
+        .flat();
 
       const purchaseCost = { count: rcCost.count, style, gain, cost };
       if (res.onPurchase) {
@@ -520,11 +527,7 @@ function getPurchaseCost<Context, TickResult>(
   gainMultiplier: DecimalSource,
   costMultiplier: DecimalSource,
 ): PurchaseCost<Context, TickResult> {
-  if (
-    !resource ||
-    Decimal.fromValue(count).equals(Decimal.dZero) ||
-    (!(resource.unlocked ?? true) && !style.includes("dry"))
-  ) {
+  if (!resource || Decimal.fromValue(count).equals(Decimal.dZero)) {
     return { count: Decimal.dZero, style, gain: [], cost: [] };
   }
 
@@ -560,6 +563,10 @@ function getPurchaseCost<Context, TickResult>(
   }
 
   let cost: ResourceCount<Context, TickResult>[] = [];
+  if (!(resource.unlocked ?? true) && resource.unlockCost) {
+    cost = resource.unlockCost();
+  }
+
   let partialCost = cost;
   let partialCount = Decimal.dZero;
   for (let i = start; i.lessThan(target); i = i.add(1)) {
@@ -718,6 +725,25 @@ function compileResource<Context, TickResult>(
         .join(", ") +
       "]";
     res.cost = Fn.compile(costFunction, res, ["n"], ctx);
+  }
+
+  if (typeof res.unlockCost === "string") {
+    const costFunction =
+      "[" +
+      (res.unlockCost as string)
+        .replace(/\s/gim, "")
+        .split(/[;]/gim)
+        .map((cost) => {
+          const parts = cost.split(/:/gim);
+          const rc = [
+            `resource: ${parts[0]}`,
+            `count: ${parts[parts.length - 1]}`,
+          ];
+          return "{" + rc.join(", ") + "}";
+        })
+        .join(", ") +
+      "]";
+    res.unlockCost = Fn.compile(costFunction, res, [], ctx);
   }
 
   if (typeof res.shouldTick === "string") {

@@ -123,9 +123,6 @@ export default function BuyButton({
     if (!enabled || Decimal.fromValue(count).equals(Decimal.dZero)) {
       return;
     }
-    if (!(res.unlocked ?? true) && allowUnlocking) {
-      res.unlocked = true;
-    }
 
     if (overrideCount != undefined) {
       res.count = Decimal.fromValue(overrideCount);

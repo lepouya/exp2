@@ -45,6 +45,15 @@ function genDerivativeResource(context: Context, name = "x", d = 0) {
       ];
     },
 
+    unlockCost() {
+      return [
+        {
+          resource: `${name}_${0}`,
+          count: Decimal.pow10(d - 0.5),
+        },
+      ];
+    },
+
     extra: {},
     onPurchase(this: Resource, purchase) {
       if (purchase.style !== "free") {
