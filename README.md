@@ -1,8 +1,6 @@
 # Todo plan
 
 - Buy all button
-- Bring kind back to resourcecounts
-- Show loading progress on screen
 
 # Things to experiment with
 
@@ -11,6 +9,7 @@
 
 # Long term ideals
 
+- Show loading progress on screen
 - Turn resource into a class
 - Document utils and models
 - Better unit test coverage

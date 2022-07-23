@@ -528,7 +528,7 @@ describe("Task execution", () => {
   });
 
   it("Task executor updates rates", () => {
-    const settings = { maxResourceTickSecs: 5 };
+    const settings = { maxResourceTickSecs: 5, rateUpdateSecs: 1 };
     const rm = genResourceManager(null, settings);
 
     const t1 = rm.upsert({

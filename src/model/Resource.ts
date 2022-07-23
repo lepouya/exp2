@@ -2,10 +2,8 @@ import Decimal, { DecimalSource } from "break_eternity.js";
 
 import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
-import Fn from "../utils/function";
 import Obj from "../utils/objects";
 import { setSaveProperties } from "../utils/store";
-import tickTimer from "../utils/tickTimer";
 import { Nullable } from "../utils/types";
 import { Settings } from "./Settings";
 
@@ -37,27 +35,25 @@ export type Resource<Context = any, TickResult = any> = {
   buy: (
     count?: DecimalSource,
     style?: PurchaseStyle,
-    gainMultiplier?: DecimalSource,
-    costMultiplier?: DecimalSource,
+    gainFactor?: DecimalSource,
+    costFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   sell: (
     count?: DecimalSource,
-    sellMultiplier?: DecimalSource,
+    sellFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   add: (
     count?: DecimalSource,
-    gainMultiplier?: DecimalSource,
+    gainFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
   canBuy: (
     count?: DecimalSource,
-    costMultiplier?: DecimalSource,
+    costFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
-  compile: () => Resource<Context, TickResult>;
-
-  gainMultiplier?: (m: DecimalSource) => DecimalSource;
-  costMultiplier?: (m: DecimalSource) => DecimalSource;
+  gainFactor?: (m: DecimalSource) => DecimalSource;
+  costFactor?: (m: DecimalSource) => DecimalSource;
 
   autoUnlock?: boolean;
   autoAward?: boolean;
@@ -100,8 +96,8 @@ export type ResourceManager<Context = any, TickResult = any> = {
   purchase: (
     toBuy: ResourceCount<Context, TickResult>[],
     style?: PurchaseStyle,
-    gainMultiplier?: DecimalSource,
-    costMultiplier?: DecimalSource,
+    gainFactor?: DecimalSource,
+    costFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   canAfford: (cost: ResourceCount<Context, TickResult>[]) => boolean;
 
@@ -112,8 +108,8 @@ export type ResourceManager<Context = any, TickResult = any> = {
     source: string,
   ) => TickResult;
 
-  gainMultiplier?: (m: DecimalSource) => DecimalSource;
-  costMultiplier?: (m: DecimalSource) => DecimalSource;
+  gainFactor?: (m: DecimalSource) => DecimalSource;
+  costFactor?: (m: DecimalSource) => DecimalSource;
 
   execution: Record<
     string,
@@ -141,8 +137,9 @@ export type PurchaseStyle =
 export type PurchaseCost<Context = any, TickResult = any> = {
   count: DecimalSource;
   style: PurchaseStyle;
-  gain: ResourceCount<Context, TickResult>[];
-  cost: ResourceCount<Context, TickResult>[];
+  gain: ResolvedRC<Context, TickResult>[];
+  cost: ResolvedRC<Context, TickResult>[];
+  partialCosts?: ResolvedRC<Context, TickResult>[][];
 };
 
 export function genResource<Context, TickResult>(
@@ -155,41 +152,17 @@ export function genResource<Context, TickResult>(
     count: Decimal.dZero,
     extra: {},
 
-    value: () =>
-      res.minCount != undefined || res.maxCount != undefined
-        ? res.count.clamp(
-            res.minCount ?? Decimal.dZero,
-            res.maxCount ?? Decimal.dInf,
-          )
-        : res.count,
+    value: () => res.count.clamp(res.minCount ?? 0, res.maxCount ?? Infinity),
     cost: () => [],
 
-    buy: (
-      count = Decimal.dOne,
-      style = "partial",
-      gainMultiplier = Decimal.dOne,
-      costMultiplier = Decimal.dOne,
-    ) =>
-      purchase(
-        rm,
-        [{ resource: res, count }],
-        style,
-        gainMultiplier,
-        costMultiplier,
-      ),
-    sell: (count, sellMultiplier) =>
-      res.buy(
-        Decimal.fromValue(count ?? 1).negate(),
-        undefined,
-        undefined,
-        sellMultiplier,
-      ),
-    add: (count, gainMultiplier) => res.buy(count, "free", gainMultiplier),
+    buy: (count = 1, style = "partial", gainFactor = 1, costFactor = 1) =>
+      purchase(rm, [{ resource: res, count }], style, gainFactor, costFactor),
+    sell: (count, sellFactor) =>
+      res.buy(Decimal.neg(count ?? 1), undefined, undefined, sellFactor),
+    add: (count, gainFactor) => res.buy(count, "free", gainFactor),
 
-    canBuy: (count, costMultiplier) =>
-      res.buy(count, "dry-partial", undefined, costMultiplier),
-
-    compile: () => compileResource(res),
+    canBuy: (count, costFactor) =>
+      res.buy(count, "dry-partial", undefined, costFactor),
 
     execution: {},
     rate: { count: Decimal.dZero, ticks: 0, pastCounts: [], pastTicks: [] },
@@ -214,13 +187,9 @@ export function genResourceManager<Context, TickResult>(
     resources: {},
     upsert: (props) => upsert(rm, props),
     get: (resource) => resolve(rm, resource),
-    purchase: (
-      toBuy,
-      style = "partial",
-      gainMultiplier = Decimal.dOne,
-      costMultiplier = Decimal.dOne,
-    ) => purchase(rm, toBuy, style, gainMultiplier, costMultiplier),
-    canAfford: (cost) => canAfford(rm, cost),
+    purchase: (toBuy, style = "partial", gainFactor = 1, costFactor = 1) =>
+      purchase(rm, toBuy, style, gainFactor, costFactor),
+    canAfford: (cost) => canAfford(resolveAll(rm, cost)),
     update: (now, source) => update(rm, now ?? Date.now(), source ?? "unknown"),
     execution: {},
   };
@@ -228,25 +197,25 @@ export function genResourceManager<Context, TickResult>(
   return setSaveProperties(rm, ["resources"]);
 }
 
-function resolve<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
-  resource: Resource<Context, TickResult> | string,
-): Resource<Context, TickResult> {
+function resolve<C, R>(
+  rm: ResourceManager<C, R>,
+  res: Partial<Resource<C, R>> | string,
+): Resource<C, R> {
   return (
-    rm.resources[typeof resource === "string" ? resource : resource.name] ??
-    upsert(rm, resource)
+    rm.resources[typeof res === "string" ? res : res.name ?? ""] ??
+    upsert(rm, res)
   );
 }
 
-function upsert<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
-  props: Partial<Resource<Context, TickResult>> | string,
-): Resource<Context, TickResult> {
+function upsert<C, R>(
+  rm: ResourceManager<C, R>,
+  props: Partial<Resource<C, R>> | string,
+): Resource<C, R> {
   const name = typeof props === "string" ? props : props.name ?? "";
   const res = rm.resources[name] ?? genResource(rm, name);
 
   if (typeof props !== "string") {
-    let k: keyof Resource<Context, TickResult>;
+    let k: keyof Resource<C, R>;
     for (k in props) {
       if (k === "extra") {
         Obj.assign(res, k, props[k]);
@@ -267,11 +236,11 @@ function upsert<Context, TickResult>(
   return res;
 }
 
-function update<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
+function update<C, R>(
+  rm: ResourceManager<C, R>,
   now: number,
   source: string,
-): TickResult[] {
+): R[] {
   const {
     rateUpdateSecs = 0.1,
     rateHistoryWindow = 10,
@@ -296,9 +265,7 @@ function update<Context, TickResult>(
 
   Object.values(rm.resources).forEach((res) => {
     if (res.autoUnlock && !res.disabled && !(res.unlocked ?? true)) {
-      if (
-        canAfford(rm, res.unlockCost ? res.unlockCost() : res.cost(1), false)
-      ) {
+      if (canAfford(resolveAll(rm, (res.unlockCost ?? res.cost)(1)), false)) {
         res.unlocked = true;
       }
     }
@@ -321,7 +288,7 @@ function update<Context, TickResult>(
     res.execution.lastAttempt = now;
   });
 
-  const results: Record<string, TickResult[]> = {};
+  const results: Record<string, R[]> = {};
   const tickResources = resources.filter((res) => res.tick);
   const tickScale = 1 / 1000 / timeDilation;
   while (dt > 0) {
@@ -336,6 +303,7 @@ function update<Context, TickResult>(
         res.execution.lastTick = slice;
         res.rate.deltaTicks = (res.rate.deltaTicks ?? 0) + 1;
         res.rate.lastTickUpdate ??= slice;
+
         if (res.execution.lastResult) {
           if (!results[res.name]) {
             results[res.name] = [];
@@ -350,20 +318,16 @@ function update<Context, TickResult>(
   }
 
   resources.forEach((res) => {
-    if (
-      res.autoAward &&
-      !res.disabled &&
-      res.count.lessThan(res.maxCount ?? Decimal.dZero)
-    ) {
+    if (res.autoAward && !res.disabled && res.count.lt(res.maxCount ?? 0)) {
       const req = res.cost(res.count.add(1));
-      if (canAfford(rm, req, false)) {
+      if (canAfford(resolveAll(rm, req), false)) {
         res.count = res.count.add(1);
 
         if (res.onPurchase) {
           res.onPurchase({
-            count: Decimal.dOne,
+            count: 1,
             style: "free",
-            gain: [{ resource: res, count: Decimal.dOne }],
+            gain: [{ resource: res, count: 1 }],
             cost: [],
           });
         }
@@ -378,7 +342,7 @@ function update<Context, TickResult>(
       res.rate.lastCount == undefined ||
       rateDt >= rateUpdateSecs
     ) {
-      res.rate.count = res.count.minus(res.rate.lastCount ?? 0).divide(rateDt);
+      res.rate.count = res.count.minus(res.rate.lastCount ?? 0).div(rateDt);
       res.rate.lastCount = res.count;
       res.rate.lastCountUpdate = now;
       res.rate.pastCounts.unshift(res.rate.count);
@@ -400,8 +364,8 @@ function update<Context, TickResult>(
   });
 
   resources.forEach((res) => {
-    cache[res.name] = res.count.minus(cache[res.name] ?? Decimal.dZero);
-    if (cache[res.name].equals(Decimal.dZero)) {
+    cache[res.name] = res.count.minus(cache[res.name] ?? 0);
+    if (cache[res.name].eq(0)) {
       delete cache[res.name];
     }
 
@@ -434,56 +398,47 @@ function update<Context, TickResult>(
   return rm.execution[source].lastResult;
 }
 
-function purchase<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
-  toBuy: ResourceCount<Context, TickResult>[],
+function purchase<C, R>(
+  rm: ResourceManager<C, R>,
+  toBuy: ResourceCount<C, R>[],
   style: PurchaseStyle,
-  gainMultiplier: DecimalSource,
-  costMultiplier: DecimalSource,
-): PurchaseCost<Context, TickResult> {
-  const globalGainMultiplier = rm.gainMultiplier
-    ? rm.gainMultiplier(gainMultiplier)
-    : gainMultiplier;
-  const globalCostMultiplier = rm.costMultiplier
-    ? rm.costMultiplier(costMultiplier)
-    : costMultiplier;
+  gainFactor: DecimalSource,
+  costFactor: DecimalSource,
+): PurchaseCost<C, R> {
+  gainFactor = rm.gainFactor ? rm.gainFactor(gainFactor) : gainFactor;
+  costFactor = rm.costFactor ? rm.costFactor(costFactor) : costFactor;
 
-  const costs = resolveAll(rm, toBuy).map((rc) => {
-    const res = rc.resource;
-    const localGainMultiplier = res.gainMultiplier
-      ? res.gainMultiplier(globalGainMultiplier)
-      : globalGainMultiplier;
-    const localCostMultiplier = res.costMultiplier
-      ? res.costMultiplier(globalCostMultiplier)
-      : globalCostMultiplier;
+  const costs = resolveAll(rm, toBuy).map(({ resource, count }) => {
     const rcCost = getPurchaseCost(
       rm,
-      res,
-      rc.count,
+      resource,
+      count,
       style,
-      localGainMultiplier,
-      localCostMultiplier,
+      resource.gainFactor ? resource.gainFactor(gainFactor) : gainFactor,
+      resource.costFactor ? resource.costFactor(costFactor) : costFactor,
     );
 
     if (style.includes("dry") || Decimal.eq(rcCost.count, 0)) {
       return rcCost;
     } else {
-      if (!(res.unlocked ?? true)) {
-        res.unlocked = true;
+      if (!(resource.unlocked ?? true)) {
+        if (resource.unlockCost) {
+          resource.unlocked = true;
+        } else {
+          return { count: 0, style, gain: [], cost: [] };
+        }
       }
 
-      const gain = applyToResource(res, rcCost.gain);
+      const gain = applyToResource(resource, rcCost.gain);
       const cost = rcCost.cost
         .map(({ resource, count }) =>
-          applyToResource(resolve(rm, resource), [
-            { resource, count: Decimal.fromValue(count).negate() },
-          ]),
+          applyToResource(resource, [{ resource, count: Decimal.neg(count) }]),
         )
         .flat();
 
-      const purchaseCost = { count: rcCost.count, style, gain, cost };
-      if (res.onPurchase) {
-        res.onPurchase(purchaseCost);
+      const purchaseCost = { ...rcCost, gain, cost };
+      if (resource.onPurchase) {
+        resource.onPurchase(purchaseCost);
       }
       return purchaseCost;
     }
@@ -494,278 +449,130 @@ function purchase<Context, TickResult>(
     style,
     gain: combineResources(costs.map((rcCost) => rcCost.gain).flat()),
     cost: combineResources(costs.map((rcCost) => rcCost.cost).flat()),
+    partialCosts: costs.length === 1 ? costs[0].partialCosts ?? [] : [],
   };
 }
 
-function resolveAll<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
-  rcs: ResourceCount<Context, TickResult>[],
-): {
-  resource: Resource<Context, TickResult>;
-  count: DecimalSource;
-}[] {
+type ResolvedRC<C, R> = { resource: Resource<C, R>; count: DecimalSource };
+function resolveAll<C, R>(
+  rm: ResourceManager<C, R>,
+  rcs: ResourceCount<C, R>[],
+): ResolvedRC<C, R>[] {
   return rcs
     .map(({ resource, count }) => ({ resource: resolve(rm, resource), count }))
-    .filter(({ resource, count }) => resource && count);
+    .filter(({ resource, count }) => resource && Decimal.neq(count, 0));
 }
 
-function canAfford<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
-  cost: ResourceCount<Context, TickResult>[],
-  toSpend = true,
-): boolean {
-  return resolveAll(rm, combineResources(cost)).every((rc) =>
-    checkHasResources(rc.resource, [rc], toSpend),
+function canAfford<C, R>(cost: ResolvedRC<C, R>[], toSpend = true): boolean {
+  return combineResources(cost).every(
+    ({ resource, count }) =>
+      (resource.unlocked ?? true) &&
+      resource.count.minus(count).gte(toSpend ? resource.minCount ?? 0 : 0),
   );
 }
 
-function getPurchaseCost<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
-  resource: Resource<Context, TickResult>,
+function getPurchaseCost<C, R>(
+  rm: ResourceManager<C, R>,
+  resource: Resource<C, R>,
   count: DecimalSource,
   style: PurchaseStyle,
-  gainMultiplier: DecimalSource,
-  costMultiplier: DecimalSource,
-): PurchaseCost<Context, TickResult> {
-  if (!resource || Decimal.fromValue(count).equals(Decimal.dZero)) {
-    return { count: Decimal.dZero, style, gain: [], cost: [] };
+  gainFactor: DecimalSource,
+  costFactor: DecimalSource,
+): PurchaseCost<C, R> {
+  if (!resource || Decimal.eq(count, 0)) {
+    return { count: 0, style, gain: [], cost: [] };
   }
 
   let start = resource.count;
   let target = start
     .plus(count)
-    .clamp(
-      resource.minCount ?? Decimal.dZero,
-      resource.maxCount ?? Decimal.dInf,
-    );
+    .clamp(resource.minCount ?? 0, resource.maxCount ?? Infinity);
 
   if (style === "free") {
     const diff = target.minus(start);
     return {
       count: diff,
       style,
-      gain: [{ resource, count: diff.multiply(gainMultiplier) }],
+      gain: [{ resource, count: diff.mul(gainFactor) }],
       cost: [],
     };
   }
 
-  [gainMultiplier, costMultiplier] = [
-    Decimal.fromValue(gainMultiplier),
-    Decimal.fromValue(costMultiplier),
-  ];
-
-  if (start.greaterThan(target)) {
+  if (start.gt(target)) {
     [start, target] = [target, start];
-    [gainMultiplier, costMultiplier] = [
-      gainMultiplier.negate(),
-      costMultiplier.negate().multiply(rm.settings.sellRatio ?? 1),
+    [gainFactor, costFactor] = [
+      Decimal.neg(gainFactor),
+      Decimal.neg(costFactor).mul(rm.settings.sellRatio ?? 1),
     ];
   }
 
-  let cost: ResourceCount<Context, TickResult>[] = [];
+  let cost: ResolvedRC<C, R>[] = [];
   if (!(resource.unlocked ?? true) && resource.unlockCost) {
-    cost = resource.unlockCost();
+    cost = resolveAll(rm, resource.unlockCost());
   }
 
-  let partialCost = cost;
-  let partialCount = Decimal.dZero;
-  for (let i = start; i.lessThan(target); i = i.add(1)) {
-    const curCost = scaleResources(
-      resolveAll(rm, resource.cost(i.add(1))),
-      costMultiplier,
-    );
-    if (style.includes("partial")) {
-      partialCost = combineResources(partialCost, curCost);
-      if (!canAfford(rm, partialCost)) {
-        break;
-      }
-    }
+  const s = start.floor().toNumber(),
+    t = target.floor().toNumber();
+  if (!isFinite(s) || !isFinite(t) || Math.abs(t - s) > 1000) {
+    return { count: 0, style, gain: [], cost: [] };
+  }
 
-    partialCount = partialCount.add(1);
-    cost = combineResources(cost, curCost);
+  let partialCount = 0;
+  const partialCosts = [cost];
+  for (let i = s; i < t; i++) {
+    const curCost = resolveAll(rm, resource.cost(i + 1));
+    curCost.forEach((rc) => (rc.count = Decimal.mul(rc.count, costFactor)));
+    const partialCost = combineResources([...cost, ...curCost]);
+    partialCosts.push(partialCost);
+
+    if (style.includes("partial") && !canAfford(partialCost)) {
+      break;
+    } else {
+      partialCount++;
+      cost = partialCost;
+    }
   }
 
   if (
-    (style !== "dry-full" && !canAfford(rm, cost)) ||
-    (style === "full" && start.plus(partialCount).notEquals(target))
+    (!style.includes("dry") && !canAfford(cost)) ||
+    (style === "full" && partialCount !== t - s)
   ) {
-    return { count: Decimal.dZero, style, gain: [], cost: [] };
+    return { count: 0, style, gain: [], cost: [], partialCosts };
+  } else {
+    return {
+      count: partialCount * Decimal.sign(gainFactor),
+      style,
+      gain: [{ resource, count: Decimal.mul(gainFactor, partialCount) }],
+      cost,
+      partialCosts,
+    };
   }
-
-  return {
-    count: partialCount.multiply(gainMultiplier.sign),
-    style,
-    gain: [{ resource, count: partialCount.multiply(gainMultiplier) }],
-    cost,
-  };
 }
 
-function combineResources<Context, TickResult>(
-  rcs: ResourceCount<Context, TickResult>[],
-  ...rcss: ResourceCount<Context, TickResult>[][]
-): ResourceCount<Context, TickResult>[] {
-  return [rcs, ...rcss]
-    .flat()
-    .reduce(
-      (
-        res: ResourceCount<Context, TickResult>[],
-        rc: ResourceCount<Context, TickResult>,
-      ) => {
-        const frc = res.find(
-          (orc) =>
-            orc.resource === rc.resource ||
-            (typeof orc.resource === "string"
-              ? orc.resource
-              : orc.resource.name) ===
-              (typeof rc.resource === "string"
-                ? rc.resource
-                : rc.resource.name),
-        );
-        if (frc) {
-          frc.count = Decimal.fromValue(frc.count).plus(rc.count);
-          return res;
-        } else {
-          return [...res, { ...rc }];
-        }
-      },
-      [],
-    )
-    .filter(({ count }) => Decimal.fromValue(count).notEquals(Decimal.dZero));
+function combineResources<C, R>(rcs: ResolvedRC<C, R>[]): ResolvedRC<C, R>[] {
+  const res: Record<string, ResolvedRC<C, R>> = {};
+  rcs.forEach(({ resource, count }) => {
+    res[resource.name] ??= { resource, count: 0 };
+    res[resource.name].count = Decimal.add(res[resource.name].count, count);
+  });
+  return Object.values(res).filter(({ count }) => Decimal.neq(count, 0));
 }
 
-function scaleResources<Context, TickResult>(
-  rcs: ResourceCount<Context, TickResult>[],
-  scalar: DecimalSource,
-): ResourceCount<Context, TickResult>[] {
-  return rcs.map(({ resource, count }) => ({
-    resource,
-    count: Decimal.fromValue(count).multiply(scalar),
-  }));
-}
-
-function checkHasResources<Context, TickResult>(
-  res: Resource<Context, TickResult>,
-  rcs: ResourceCount<Context, TickResult>[],
-  toSpend = false,
-): boolean {
-  return (
-    (res.unlocked ?? true) &&
-    combineResources(rcs).every(
-      ({ resource, count }) =>
-        res.name !==
-          (typeof resource === "string" ? resource : resource.name) ||
-        res.count
-          .minus(count)
-          .greaterThanOrEqualTo(
-            toSpend && typeof resource !== "string"
-              ? resource.minCount ?? Decimal.dZero
-              : Decimal.dZero,
-          ),
-    )
-  );
-}
-
-function applyToResource<Context, TickResult>(
-  res: Resource<Context, TickResult>,
-  rcs: ResourceCount<Context, TickResult>[],
-): ResourceCount<Context, TickResult>[] {
+function applyToResource<C, R>(
+  res: Resource<C, R>,
+  rcs: ResolvedRC<C, R>[],
+): ResolvedRC<C, R>[] {
   return combineResources(
     rcs
-      .filter(
-        ({ resource }) =>
-          (res.unlocked ?? true) &&
-          res.name ===
-            (typeof resource === "string" ? resource : resource.name),
-      )
+      .filter(({ resource }) => res.name === resource.name)
       .map(({ count }) => {
         const prev = res.count;
-        res.count = res.count.plus(count);
-        if (res.minCount != undefined || res.maxCount != undefined) {
-          res.count = res.count.clamp(
-            res.minCount ?? Decimal.dZero,
-            res.maxCount ?? Decimal.dInf,
-          );
-        }
+        res.count = res.count
+          .plus(count)
+          .clamp(res.minCount ?? 0, res.maxCount ?? Infinity);
 
         return [{ resource: res, count: res.count.minus(prev) }];
       })
       .flat(),
   );
-}
-
-function compileResource<Context, TickResult>(
-  res: Resource<Context, TickResult>,
-) {
-  const ctx = {
-    ...res.manager.context,
-    ...res.manager,
-    ...res.manager.resources,
-    ...Decimal,
-    timer: Fn.apply(tickTimer, res),
-  };
-
-  if (typeof res.value === "string") {
-    res.value = Fn.compile(res.value, res, [], ctx);
-  }
-
-  if (typeof res.cost === "string") {
-    const costFunction =
-      "[" +
-      (res.cost as string)
-        .replace(/\s/gim, "")
-        .split(/[;]/gim)
-        .map((cost) => {
-          const parts = cost.split(/:/gim);
-          const rc = [
-            `resource: ${parts[0]}`,
-            `count: ${parts[parts.length - 1]}`,
-          ];
-          return "{" + rc.join(", ") + "}";
-        })
-        .join(", ") +
-      "]";
-    res.cost = Fn.compile(costFunction, res, ["n"], ctx);
-  }
-
-  if (typeof res.unlockCost === "string") {
-    const costFunction =
-      "[" +
-      (res.unlockCost as string)
-        .replace(/\s/gim, "")
-        .split(/[;]/gim)
-        .map((cost) => {
-          const parts = cost.split(/:/gim);
-          const rc = [
-            `resource: ${parts[0]}`,
-            `count: ${parts[parts.length - 1]}`,
-          ];
-          return "{" + rc.join(", ") + "}";
-        })
-        .join(", ") +
-      "]";
-    res.unlockCost = Fn.compile(costFunction, res, [], ctx);
-  }
-
-  if (typeof res.shouldTick === "string") {
-    res.shouldTick = Fn.compile(res.shouldTick, res, ["dt", "source"], ctx);
-  }
-  if (typeof res.tick === "string") {
-    res.tick = Fn.compile(res.tick, res, ["dt", "source"], ctx);
-  }
-
-  if (typeof res.gainMultiplier === "string") {
-    res.gainMultiplier = Fn.compile(res.gainMultiplier, res, ["m"], ctx);
-  }
-  if (typeof res.costMultiplier === "string") {
-    res.costMultiplier = Fn.compile(res.costMultiplier, res, ["m"], ctx);
-  }
-
-  if (typeof res.onPurchase === "string") {
-    res.onPurchase = Fn.compile(res.onPurchase, res, ["purchase"], ctx);
-  }
-  if (typeof res.onChange === "string") {
-    res.onChange = Fn.compile(res.onChange, res, ["value", "source"], ctx);
-  }
-
-  return res;
 }
