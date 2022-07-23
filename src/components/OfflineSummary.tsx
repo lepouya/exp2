@@ -1,5 +1,5 @@
 import { Context } from "../model/Context";
-import * as Format from "../utils/format";
+import Format from "../utils/format";
 import ResourceRender from "./ResourceRender";
 
 export default function registerOfflineSummary(context: Context) {
@@ -18,18 +18,18 @@ export default function registerOfflineSummary(context: Context) {
         <>
           <div className="full">
             You were offline for{" "}
-            {Format.time(
-              loadUpdate.lastDelta * 1000,
-              {},
-              { now: "", ago: "", never: "" },
-            )}
+            {Format.time(loadUpdate.lastDelta * 1000, {
+              now: "",
+              ago: "",
+              never: "",
+            })}
             . During this time, you gained:
           </div>
           {Object.keys(loadUpdate.lastChanges).map((res) => (
             <div className="full" key={res}>
               <ResourceRender
-                resource={rm.get(res)}
-                value={loadUpdate.lastChanges[res]}
+                resource={res}
+                override={{ count: loadUpdate.lastChanges[res] }}
               />
             </div>
           ))}

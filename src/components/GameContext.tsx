@@ -2,7 +2,6 @@ import { createContext, PropsWithChildren, useContext } from "react";
 
 import { emptyContext, wrapContext } from "../model/Context";
 import genDerivatives from "../model/Derivatives";
-import { compileAllResources } from "../model/Resource";
 import registerOfflineSummary from "./OfflineSummary";
 
 const context = emptyContext<boolean>();
@@ -31,7 +30,9 @@ Object.assign(context, {
     _load_resources
       .flat()
       .forEach((props: any) => this.resourceManager.upsert(props));
-    compileAllResources(this.resourceManager);
+    Object.values(this.resourceManager.resources).forEach((res) =>
+      res.compile(),
+    );
 
     _load_nuxes.flat().forEach((props: any) => this.nuxManager.register(props));
   },

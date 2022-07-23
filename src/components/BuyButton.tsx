@@ -99,13 +99,8 @@ export default function BuyButton({
   function renderResourceCounts(rcs: ResourceCount[], multiplier: Decimal) {
     return rcs.map((rc, i) => (
       <ResourceRender
-        resource={
-          typeof rc.resource === "string" ? { name: rc.resource } : rc.resource
-        }
-        value={multiplier.multiply(rc.count)}
-        display={
-          typeof rc.resource !== "string" ? rc.resource.display : "number"
-        }
+        resource={rc.resource}
+        override={{ count: multiplier.multiply(rc.count) }}
         precision={precision}
         infix=""
         placeholder=""

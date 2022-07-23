@@ -6,7 +6,7 @@ import toast from "../components/Toast";
 import { themes } from "../data/themes";
 import { setTheme } from "../utils/document";
 import { loadFromFile, saveToFile } from "../utils/fileStorage";
-import * as Format from "../utils/format";
+import Format from "../utils/format";
 import formatWithNotation from "../utils/notation";
 import Obj from "../utils/objects";
 
@@ -281,7 +281,7 @@ export default function Options() {
         </div>
         <div className="half">Saving frequency:</div>
         <div className="half center">
-          {Format.time(1000 * settings.saveFrequencySecs, {}, { ago: "" })}
+          {Format.time(1000 * settings.saveFrequencySecs, { ago: "" })}
         </div>
         <div className="half"></div>
         <div className="half center">

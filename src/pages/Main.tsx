@@ -39,8 +39,6 @@ function RenderDerivative(props: { resource: Resource<Context> }) {
       <div className="half">
         <ResourceRender
           resource={props.resource}
-          precision={0}
-          ratePrecision={1}
           showExtras={true}
           showRate={true}
         />

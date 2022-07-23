@@ -1,47 +1,79 @@
-import { DecimalSource } from "break_eternity.js";
+import Decimal, { DecimalSource } from "break_eternity.js";
 
+import { Resource } from "../model/Resource";
 import formatWithNotation, { Notation } from "./notation";
+import Obj from "./objects";
 
-export function number(
-  num: DecimalSource,
-  options?: {
-    notation?: Notation | string;
-    len?: "tiny" | "short" | "long";
-    prec?: number;
-  },
+export default function Format(
+  value?: DecimalSource | Date | undefined | null,
+  options?: NumberOptions & TimeOptions & WordOptions & ResourceOptions,
 ): string {
-  const prec = options?.prec ?? 0;
-  const expPrec = Math.max(
-    prec,
-    options?.len === "tiny" ? 0 : options?.len === "short" ? 2 : 3,
-  );
-  return formatWithNotation(num, options?.notation, prec, expPrec, prec);
+  if (value == null || value == undefined || typeof value === "string") {
+    return Format.word(value ?? undefined, options);
+  } else if (value instanceof Date) {
+    return Format.time(value.getTime(), options);
+  } else if (value instanceof Decimal || typeof value === "number") {
+    return Format.number(value, options);
+  } else {
+    return "";
+  }
 }
 
-export function time(
-  time: number,
-  options?: {
-    len?: "tiny" | "short" | "long";
-    millis?: boolean;
-    epoch?: number;
-    oxfordComma?: boolean;
-  },
-  words?: {
-    sep?: string;
-    lastSep?: string;
-    now?: string;
-    never?: string;
-    ago?: string;
-  },
-): string {
+type NumberOptions = {
+  notation?: Notation | string;
+  len?: "tiny" | "short" | "long";
+  prec?: number;
+  expPrec?: number;
+  smallPrec?: number;
+  alwaysShowSign?: boolean;
+};
+
+Format.number = function (num: DecimalSource, options?: NumberOptions): string {
+  const prec = options?.prec ?? 0;
+  const smallPrec = options?.smallPrec ?? prec;
+  const expPrec =
+    options?.expPrec ??
+    Math.max(
+      prec,
+      options?.len === "tiny" ? 0 : options?.len === "short" ? 2 : 3,
+    );
+
+  let r = formatWithNotation(num, options?.notation, prec, expPrec, smallPrec);
+  if (
+    r &&
+    options?.alwaysShowSign &&
+    !"+-".includes(r[0]) &&
+    Decimal.gte(num, 0)
+  ) {
+    r = "+" + r;
+  }
+
+  return r;
+};
+
+type TimeOptions = {
+  len?: "tiny" | "short" | "long";
+  millis?: boolean;
+  epoch?: number;
+  oxfordComma?: boolean;
+  alwaysShowSign?: boolean;
+
+  sep?: string;
+  lastSep?: string;
+  now?: string;
+  never?: string;
+  ago?: string;
+};
+
+Format.time = function (time: number, options?: TimeOptions): string {
   const len = options?.len ?? "long";
-  const sep = words?.sep ?? len === "long" ? ", " : ":";
+  const sep = options?.sep ?? len === "long" ? ", " : ":";
   const lastSep =
     (options?.oxfordComma ? sep : "") +
-    (words?.lastSep ?? len === "long" ? " and " : sep);
-  const now = words?.now ?? len === "long" ? "now" : "";
-  const never = words?.never ?? len === "long" ? "never" : "";
-  const ago = words?.ago ?? len === "long" ? "ago" : "";
+    (options?.lastSep ?? len === "long" ? " and " : sep);
+  const now = options?.now ?? len === "long" ? "now" : "";
+  const never = options?.never ?? len === "long" ? "never" : "";
+  const ago = options?.ago ?? len === "long" ? "ago" : "";
 
   if (
     never != undefined &&
@@ -121,40 +153,140 @@ export function time(
     parts = [parts.join(sep), pop];
   }
 
-  return parts.join(lastSep) + (ago != undefined ? " " + ago : "");
-}
+  let r = parts.join(lastSep) + (ago != undefined ? " " + ago : "");
+  if (
+    r &&
+    options?.alwaysShowSign &&
+    time >= 0 &&
+    len !== "long" &&
+    !"+-".includes(r[0])
+  ) {
+    r = "+" + r;
+  }
 
-export function word(
-  word?: string,
-  item?: {
-    name?: string;
-    count?: number;
-    singularName?: string;
-    pluralName?: string;
-  },
-  options?: {
-    tolerance?: number;
-    condition?: boolean;
-    allowEmpties?: boolean;
-    capitalize?: boolean;
-  },
-): string | undefined {
+  return r;
+};
+
+type WordOptions = {
+  name?: string;
+  count?: number;
+  singularName?: string;
+  pluralName?: string;
+
+  tolerance?: number;
+  condition?: boolean;
+  allowEmpties?: boolean;
+  capitalize?: boolean;
+};
+
+Format.word = function (word?: string, options?: WordOptions): string {
   if (!word) {
     word =
-      (Math.abs(Math.abs(item?.count ?? 0) - 1) <= (options?.tolerance ?? 0.001)
-        ? item?.singularName
-        : item?.pluralName) ?? item?.name;
+      (Math.abs(Math.abs(options?.count ?? 0) - 1) <=
+      (options?.tolerance ?? 0.001)
+        ? options?.singularName
+        : options?.pluralName) ?? options?.name;
   }
 
   if (!(options?.condition ?? true)) {
-    return undefined;
+    return "";
   } else if (!word && !(options?.allowEmpties ?? false)) {
-    return undefined;
+    return "";
   } else if (!(options?.capitalize ?? true)) {
-    return word;
+    return word ?? "";
   } else {
     return (word ?? "")
       .replace(/([a-z])([A-Z]|_\S)/g, (_, c1, c2) => `${c1} ${c2.slice(-1)}`)
       .replace(/(?:^|\s)\w(?=\w)/g, (c) => c.toUpperCase());
   }
-}
+};
+
+type ResourceOptions = {
+  override?: Partial<Resource>;
+  round?: typeof Decimal.round;
+  useRatePercent?: boolean;
+};
+
+Format.resource = function <Context, TickResult>(
+  res: Partial<Resource<Context, TickResult>>,
+  options?: NumberOptions & TimeOptions & WordOptions & ResourceOptions,
+) {
+  options ||= {};
+  res = options.override ? { ...res, ...options.override } : res;
+  let display = res.display ?? "number";
+  options.len ??= "long";
+  options.prec ??= display === "time" ? 3 : display === "number" ? 2 : 1;
+  options.smallPrec ??= display === "number" ? 0 : options.prec;
+  options.round ??= display === "number" ? Decimal.floor : Decimal.round;
+  options.millis ??= options.prec > 0;
+  options.notation ||= res.manager?.settings.numberFormat || "Standard";
+  options.tolerance ??=
+    10 ** (-options.prec - (display === "percentage" ? 2 : 0));
+
+  let count = res.value ? res.value() : res.count;
+  if (count) {
+    count = options.round(count.div(options.tolerance)).mul(options.tolerance);
+  }
+  let value = undefined,
+    valueSign = undefined;
+  if (count && display !== "none") {
+    if (display === "time") {
+      value = Format.time(count.toNumber() * 1000, options);
+    } else if (display === "percentage") {
+      value = Format(count.mul(100), options) + "%";
+    } else {
+      value = Format(count, options);
+    }
+
+    valueSign = count.cmp_tolerance(Decimal.dZero, options.tolerance);
+  }
+
+  options.count ??= count ? count.toNumber() : undefined;
+  options.name ??= res.name;
+  options.singularName ??= res.singularName ?? res.pluralName;
+  options.pluralName ??= res.pluralName ?? res.singularName;
+  const name = Format(options.override?.name, options) || undefined;
+
+  let max = undefined;
+  if (res.maxCount) {
+    max = Format(res.maxCount, options);
+  }
+
+  const extras = Obj.map(
+    res.extra || {},
+    (n) => Format(n, options) || undefined,
+    (k) => Format(k, options)
+  );
+
+  let rate = undefined,
+    rateSign = undefined;
+  if (res.rate?.lastCountUpdate && res.rate.count && display !== "none") {
+    let rateValue = res.rate.count;
+    options.useRatePercent ??= count && count.gte(1000) && rateValue.gte(1000);
+    if (display === "number" && options.useRatePercent && count) {
+      display = "percentage";
+      rateValue = rateValue.div(count);
+    }
+
+    options.len = options.len !== "long" ? "tiny" : "short";
+    options.alwaysShowSign = true;
+    options.smallPrec = (options.smallPrec ?? options.prec) + 2;
+    options.prec += 2;
+
+    if (display === "time") {
+      rate = Format.time(res.rate.count.toNumber() * 1000, options);
+    } else if (display === "percentage") {
+      rate = Format(rateValue.mul(100), options) + "%";
+    } else {
+      rate = Format(rateValue, options);
+    }
+
+    if (rate) {
+      rate = rate + "/s";
+    }
+
+    rateSign = Decimal.cmp_tolerance(rateValue, 0, options.tolerance);
+  }
+
+  return { name, value, valueSign, max, rate, rateSign, extras };
+};

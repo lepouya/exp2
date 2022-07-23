@@ -53,6 +53,8 @@ export type Resource<Context = any, TickResult = any> = {
     costMultiplier?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
+  compile: () => Resource<Context, TickResult>;
+
   gainMultiplier?: (m: DecimalSource) => DecimalSource;
   costMultiplier?: (m: DecimalSource) => DecimalSource;
 
@@ -185,6 +187,8 @@ export function genResource<Context, TickResult>(
 
     canBuy: (count, costMultiplier) =>
       res.buy(count, "dry-partial", undefined, costMultiplier),
+
+    compile: () => compileResource(res),
 
     execution: {},
     rate: { count: Decimal.dZero, ticks: 0, pastCounts: [], pastTicks: [] },
@@ -682,60 +686,60 @@ function applyToResource<Context, TickResult>(
   );
 }
 
-export function compileAllResources<Context, TickResult>(
-  rm: ResourceManager<Context, TickResult>,
+function compileResource<Context, TickResult>(
+  res: Resource<Context, TickResult>,
 ) {
-  Object.values(rm.resources).forEach((res) => {
-    const ctx = {
-      ...res.manager.context,
-      ...res.manager,
-      ...res.manager.resources,
-      ...Decimal,
-      timer: Fn.apply(tickTimer, res),
-    };
+  const ctx = {
+    ...res.manager.context,
+    ...res.manager,
+    ...res.manager.resources,
+    ...Decimal,
+    timer: Fn.apply(tickTimer, res),
+  };
 
-    if (typeof res.value === "string") {
-      res.value = Fn.compile(res.value, res, [], ctx);
-    }
+  if (typeof res.value === "string") {
+    res.value = Fn.compile(res.value, res, [], ctx);
+  }
 
-    if (typeof res.cost === "string") {
-      const costFunction =
-        "[" +
-        (res.cost as string)
-          .replace(/\s/gim, "")
-          .split(/[;]/gim)
-          .map((cost) => {
-            const parts = cost.split(/:/gim);
-            const rc = [
-              `resource: ${parts[0]}`,
-              `count: ${parts[parts.length - 1]}`,
-            ];
-            return "{" + rc.join(", ") + "}";
-          })
-          .join(", ") +
-        "]";
-      res.cost = Fn.compile(costFunction, res, ["n"], ctx);
-    }
+  if (typeof res.cost === "string") {
+    const costFunction =
+      "[" +
+      (res.cost as string)
+        .replace(/\s/gim, "")
+        .split(/[;]/gim)
+        .map((cost) => {
+          const parts = cost.split(/:/gim);
+          const rc = [
+            `resource: ${parts[0]}`,
+            `count: ${parts[parts.length - 1]}`,
+          ];
+          return "{" + rc.join(", ") + "}";
+        })
+        .join(", ") +
+      "]";
+    res.cost = Fn.compile(costFunction, res, ["n"], ctx);
+  }
 
-    if (typeof res.shouldTick === "string") {
-      res.shouldTick = Fn.compile(res.shouldTick, res, ["dt", "source"], ctx);
-    }
-    if (typeof res.tick === "string") {
-      res.tick = Fn.compile(res.tick, res, ["dt", "source"], ctx);
-    }
+  if (typeof res.shouldTick === "string") {
+    res.shouldTick = Fn.compile(res.shouldTick, res, ["dt", "source"], ctx);
+  }
+  if (typeof res.tick === "string") {
+    res.tick = Fn.compile(res.tick, res, ["dt", "source"], ctx);
+  }
 
-    if (typeof res.gainMultiplier === "string") {
-      res.gainMultiplier = Fn.compile(res.gainMultiplier, res, ["m"], ctx);
-    }
-    if (typeof res.costMultiplier === "string") {
-      res.costMultiplier = Fn.compile(res.costMultiplier, res, ["m"], ctx);
-    }
+  if (typeof res.gainMultiplier === "string") {
+    res.gainMultiplier = Fn.compile(res.gainMultiplier, res, ["m"], ctx);
+  }
+  if (typeof res.costMultiplier === "string") {
+    res.costMultiplier = Fn.compile(res.costMultiplier, res, ["m"], ctx);
+  }
 
-    if (typeof res.onPurchase === "string") {
-      res.onPurchase = Fn.compile(res.onPurchase, res, ["purchase"], ctx);
-    }
-    if (typeof res.onChange === "string") {
-      res.onChange = Fn.compile(res.onChange, res, ["value", "source"], ctx);
-    }
-  });
+  if (typeof res.onPurchase === "string") {
+    res.onPurchase = Fn.compile(res.onPurchase, res, ["purchase"], ctx);
+  }
+  if (typeof res.onChange === "string") {
+    res.onChange = Fn.compile(res.onChange, res, ["value", "source"], ctx);
+  }
+
+  return res;
 }
