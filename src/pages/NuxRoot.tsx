@@ -62,16 +62,16 @@ export default function NuxRoot() {
     }
   }
 
-  function calcStyle(size?: string) {
-    return `max(5%, 1em, min(90%, calc(100% - 2em), calc(${size})))`;
+  function calcStyle(v?: string, d = "%") {
+    return `max(5${d}, 1em, min(90${d}, calc(100${d} - 2em), calc(${v})))`;
   }
 
   const bounds = {
-    left: calcStyle(nux.bounds.left),
-    bottom: calcStyle("100vh - " + nux.bounds.top + " - " + nux.bounds.height),
-    width: calcStyle(nux.bounds.width),
-    minHeight: calcStyle(nux.bounds.height),
-    maxHeight: calcStyle("100%"),
+    left: calcStyle(nux.bounds.left, "vw"),
+    bottom: calcStyle(`100vh - ${nux.bounds.top} - ${nux.bounds.height}`, "vh"),
+    width: calcStyle(nux.bounds.width, "vw"),
+    minHeight: calcStyle(nux.bounds.height, "vh"),
+    maxHeight: calcStyle("100vh", "vh"),
   };
 
   const nuxRoot = (
