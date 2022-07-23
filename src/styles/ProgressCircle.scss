@@ -1,6 +1,7 @@
 @use "./Theme";
 
 .progress-circle {
+  position: relative;
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
@@ -16,10 +17,10 @@
     position: absolute;
     pointer-events: none;
 
-    > circle {
+    > path {
       fill: transparent;
       fill-opacity: 0;
-      stroke-width: 2.5;
+      stroke-width: 5;
       stroke-linecap: round;
     }
   }

@@ -2,7 +2,6 @@
 
 - Buy all button
 - Bring kind back to resourcecounts
-- Draw arcs for progess circle instead of dash array
 - Show loading progress on screen
 
 # Things to experiment with

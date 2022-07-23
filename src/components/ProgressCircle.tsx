@@ -1,7 +1,10 @@
 import { PropsWithChildren } from "react";
 
+import clamp from "../utils/clamp";
+
 export type ProgressCircleProps = PropsWithChildren<{
   value: number;
+  startValue?: number;
   minValue?: number;
   maxValue?: number;
   width?: string | number;
@@ -12,6 +15,7 @@ export type ProgressCircleProps = PropsWithChildren<{
 
 export default function ProgressCircle({
   value,
+  startValue,
   minValue = 0.0,
   maxValue = 1.0,
   width = "100px",
@@ -20,7 +24,12 @@ export default function ProgressCircle({
   className,
   children,
 }: ProgressCircleProps) {
-  const pct = (value - minValue) / (maxValue - minValue);
+  const pct = clamp((value - minValue) / (maxValue - minValue));
+  const startAngle =
+    (clamp(((startValue ?? 0) - minValue) / (maxValue - minValue)) - 0.25) *
+    (2 * Math.PI);
+  const endAngle = startAngle + pct * 2 * Math.PI;
+
   return (
     <div
       className={`progress-circle ${className ?? ""}`}
@@ -31,13 +40,17 @@ export default function ProgressCircle({
         {children}
       </div>
       <svg viewBox="-55 -55 110 110" width={width} height={height}>
-        <circle className="secondary" r={50} />
-        <circle
+        <path
+          className="secondary"
+          d="M50,0 A50,50 0 1,1 -50,0 A50,50 0 1,1 50,0"
+        />
+        <path
           className="primary"
-          r={50}
-          transform="rotate(-90)"
-          strokeDasharray={Math.ceil(Math.PI * 100)}
-          strokeDashoffset={Math.ceil(Math.PI * 100 * (1 - pct))}
+          d={`
+            M ${50 * Math.cos(startAngle)} ${50 * Math.sin(startAngle)}
+            A 50 50 0 ${pct <= 0.5 ? 0 : 1} 1
+            ${50 * Math.cos(endAngle)} ${50 * Math.sin(endAngle)}
+          `}
         />
       </svg>
     </div>
