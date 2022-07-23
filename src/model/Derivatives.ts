@@ -40,17 +40,15 @@ function genDerivativeResource(context: Context, name = "x", d = 0) {
       return [
         {
           resource: `${name}_${0}`,
-          count: l.plus(Decimal.dOne).multiply(d).plus(l).pow10(),
+          count: l.plus(1).multiply(d).plus(l).pow10(),
         },
       ];
     },
 
     unlockCost() {
       return [
-        {
-          resource: `${name}_${0}`,
-          count: Decimal.pow10(d - 0.5),
-        },
+        { resource: `${name}_${0}`, count: Decimal.pow10(d - 0.5) },
+        { resource: `${name}_${d - 1}`, count: 1 },
       ];
     },
 
