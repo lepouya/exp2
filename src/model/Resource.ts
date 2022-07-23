@@ -273,8 +273,8 @@ function update<Context, TickResult>(
   source: string,
 ): TickResult[] {
   const {
-    rateUpdateSecs = 1,
-    rateHistoryWindow = 3,
+    rateUpdateSecs = 0.1,
+    rateHistoryWindow = 10,
     minResourceUpdateSecs = 0.001,
     maxResourceUpdateSecs = 24 * 60 * 60,
     maxResourceTickSecs = 1,

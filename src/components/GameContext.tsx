@@ -24,7 +24,7 @@ const _load_nuxes: any[] = [];
 
 Object.assign(context, {
   init: function (this: typeof context) {
-    genDerivatives(this, "x", 8);
+    genDerivatives(this, "x", 100);
     registerOfflineSummary(this);
 
     _load_resources
