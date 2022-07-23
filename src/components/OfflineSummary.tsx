@@ -6,13 +6,20 @@ export default function registerOfflineSummary(context: Context) {
   context.nuxManager.register({
     name: "OfflineSummary",
     title: "While you were offline...",
+    bounds: { height: "32em" },
     body(_, manager) {
       const rm = manager.context.resourceManager;
       const loadUpdate = rm.execution.load;
+      const keys = Object.keys(loadUpdate?.lastChanges ?? {});
+      let remainder = 0;
+
       if (!loadUpdate) {
         return null;
-      } else if (Object.keys(loadUpdate.lastChanges).length === 0) {
+      } else if (keys.length === 0) {
         return <div className="full">Nothing happened!</div>;
+      } else if (keys.length > 12) {
+        remainder = keys.length - 11;
+        keys.splice(11);
       }
       return (
         <>
@@ -25,7 +32,7 @@ export default function registerOfflineSummary(context: Context) {
             })}
             . During this time, you gained:
           </div>
-          {Object.keys(loadUpdate.lastChanges).map((res) => (
+          {keys.map((res) => (
             <div className="full" key={res}>
               <ResourceRender
                 resource={res}
@@ -33,6 +40,9 @@ export default function registerOfflineSummary(context: Context) {
               />
             </div>
           ))}
+          {remainder > 0 && (
+            <div className="full center">... and {remainder} more ...</div>
+          )}
         </>
       );
     },
