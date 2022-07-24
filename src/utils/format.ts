@@ -255,7 +255,7 @@ Format.resource = function <Context, TickResult>(
   const extras = Obj.map(
     res.extra || {},
     (n) => Format(n, options) || undefined,
-    (k) => Format(k, options)
+    (k) => Format(k, options),
   );
 
   let rate = undefined,
