@@ -1,6 +1,7 @@
 # Todo plan
 
-- Resource count buy override
+- Keyboard shortcuts
+- Rearrange value displays
 
 # Things to experiment with
 

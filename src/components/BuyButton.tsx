@@ -16,8 +16,8 @@ export type BuyButtonProps = {
   increment?: number;
   precision?: number;
 
-  gainMultiplier?: DecimalSource;
-  costMultiplier?: DecimalSource;
+  gainFactor?: DecimalSource;
+  costFactor?: DecimalSource;
   mode?: "buy" | "sell";
 
   overrideCount?: DecimalSource;
@@ -44,8 +44,8 @@ export default function BuyButton({
   increment,
   precision = 0,
 
-  gainMultiplier = 1,
-  costMultiplier = 1,
+  gainFactor = 1,
+  costFactor = 1,
   mode = "buy",
 
   overrideCount,
@@ -80,11 +80,11 @@ export default function BuyButton({
     }
   }
 
-  function renderResourceCounts(rcs: ResourceCount[], multiplier = 1) {
+  function renderResourceCounts(rcs: ResourceCount[], Factor = 1) {
     return rcs.map(({ resource, count }, i) => {
       resource = context.resourceManager.get(resource);
       const res = Format.resource(resource, {
-        override: { count: Decimal.mul(count, multiplier) },
+        override: { count: Decimal.mul(count, Factor) },
         prec: precision,
         alwaysShowSign: true,
       });
@@ -106,37 +106,29 @@ export default function BuyButton({
     });
   }
 
-  function doPurchase(count: DecimalSource, event: MouseEvent) {
+  function doPurchase(amount: DecimalSource, event: MouseEvent) {
     event.preventDefault();
-    if (!enabled || Decimal.eq(count, 0)) {
+    if (!enabled || Decimal.eq(amount, 0)) {
       return;
     }
 
-    const originalCount = res.count;
-    if (overrideCount != undefined) {
-      res.count = Decimal.fromValue(overrideCount);
-    }
-    const bought = res.buy(count, "partial", gainMultiplier, costMultiplier);
-
-    if (overrideCount != undefined) {
-      res.count = originalCount.plus(res.count).minus(overrideCount);
-    }
+    const bought = res.buy(
+      amount,
+      "partial",
+      gainFactor,
+      costFactor,
+      overrideCount,
+    );
 
     if (onPurchase && bought.gain.length > 0) {
       onPurchase(res, bought.gain[0].count);
     }
   }
 
-  const originalCount = res.count;
-  if (overrideCount != undefined) {
-    res.count = Decimal.fromValue(overrideCount);
-  }
   const tx =
     mode === "buy"
-      ? res.buy(amount, "dry-partial", gainMultiplier, costMultiplier)
-      : res.sell(amount, costMultiplier);
-  res.count = originalCount;
-
+      ? res.buy(amount, "dry-partial", gainFactor, costFactor, overrideCount)
+      : res.sell(amount, "dry-full", 1, costFactor, overrideCount);
   const active = context.resourceManager.canAfford(tx.cost);
   const hasCost = tx.cost.some(({ count }) => Decimal.neq(count, 0));
   const classNames = [className, "buy-button", (active ? "" : "in") + "active"];
@@ -195,17 +187,21 @@ BuyButton.BuyAmountButtons = () => {
 };
 
 export type BuyAllButtonProps = {
-  resources?: (string | Resource)[];
+  resources?:
+    | Record<string, DecimalSource | undefined>
+    | Array<Resource | string>;
   enabled?: boolean;
   showNames?: boolean;
 
   maxNum?: number;
   minNum?: number;
   increment?: number;
+
+  overrideCount?: DecimalSource;
   overrideBuyAmount?: string;
 
-  gainMultiplier?: DecimalSource;
-  costMultiplier?: DecimalSource;
+  gainFactor?: DecimalSource;
+  costFactor?: DecimalSource;
 
   prefix?: string;
   infix?: string;
@@ -220,17 +216,19 @@ export type BuyAllButtonProps = {
 };
 
 BuyButton.BuyAllButton = ({
-  resources = [],
+  resources = {},
   enabled = true,
   showNames = true,
 
   maxNum,
   minNum,
   increment,
+
+  overrideCount,
   overrideBuyAmount,
 
-  gainMultiplier = 1,
-  costMultiplier = 1,
+  gainFactor = 1,
+  costFactor = 1,
 
   prefix = "Buy",
   suffix = "",
@@ -243,7 +241,7 @@ BuyButton.BuyAllButton = ({
   onPurchase,
 }: BuyAllButtonProps) => {
   const context = useGameContext();
-  const buyAmount = overrideBuyAmount ?? context.settings.buyAmount ?? "+1";
+  const buyAmount = overrideBuyAmount || context.settings.buyAmount || "+1";
   const predefAmounts = buyAmounts[buyAmount] ?? buyAmounts["+1"];
   const amount = {
     minAmount: minNum ?? predefAmounts.min,
@@ -252,8 +250,9 @@ BuyButton.BuyAllButton = ({
   };
 
   let names = all;
-  if (showNames && resources && resources.length > 0) {
-    names = resources
+  const limits = Array.isArray(resources) ? resources : Object.keys(resources);
+  if (showNames && limits.length > 0) {
+    names = limits
       .map((res) => context.resourceManager.get(res))
       .map((res) => res.singularName ?? res.pluralName ?? res.name)
       .filter((name) => !!name)
@@ -266,12 +265,19 @@ BuyButton.BuyAllButton = ({
       return;
     }
 
+    if (Array.isArray(resources)) {
+      resources = Object.fromEntries(
+        resources.map((n) => [typeof n === "string" ? n : n.name, undefined]),
+      );
+    }
+
     const bought = context.resourceManager.purchaseAll(
       resources,
       amount,
       "partial",
-      gainMultiplier,
-      costMultiplier,
+      gainFactor,
+      costFactor,
+      overrideCount,
     );
 
     if (onPurchase && bought.gain.length > 0) {
@@ -287,9 +293,11 @@ BuyButton.BuyAllButton = ({
       style={style}
     >
       {prefix && <div className="prefix">{prefix}</div>}
-      <div className="icon">
-        {buyIcons[buyAmount[0]] && <Icon icon={buyIcons[buyAmount[0]]} />}
-      </div>
+      {buyIcons[buyAmount[0]] && (
+        <div className="icon">
+          <Icon icon={buyIcons[buyAmount[0]]} />
+        </div>
+      )}
       <div className="amount">
         {buyAmount.replace(/^[+x]/, "").toUpperCase()}
       </div>

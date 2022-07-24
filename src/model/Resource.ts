@@ -37,10 +37,14 @@ export type Resource<Context = any, TickResult = any> = {
     style?: PurchaseStyle,
     gainFactor?: DecimalSource,
     costFactor?: DecimalSource,
+    countOverride?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   sell: (
     amount?: PurchaseAmount,
+    style?: PurchaseStyle,
+    gainFactor?: DecimalSource,
     sellFactor?: DecimalSource,
+    countOverride?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   add: (
     amount?: PurchaseAmount,
@@ -50,6 +54,7 @@ export type Resource<Context = any, TickResult = any> = {
   canBuy: (
     amount?: PurchaseAmount,
     costFactor?: DecimalSource,
+    countOverride?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
   gainFactor?: (m: DecimalSource) => DecimalSource;
@@ -100,13 +105,15 @@ export type ResourceManager<Context = any, TickResult = any> = {
     style?: PurchaseStyle,
     gainFactor?: DecimalSource,
     costFactor?: DecimalSource,
+    countOverride?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   purchaseAll: (
-    limitResources?: (Resource<Context, TickResult> | string)[],
+    resources?: Record<string, DecimalSource | undefined>,
     amount?: PurchaseAmount,
     style?: PurchaseStyle,
     gainFactor?: DecimalSource,
     costFactor?: DecimalSource,
+    countOverride?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
   update: (now?: number, source?: string) => TickResult[];
@@ -174,24 +181,25 @@ export function genResource<Context, TickResult>(
       return [];
     },
 
-    buy(amount = 1, style = "partial", gainFactor = 1, costFactor = 1) {
-      return purchaseVariable(res, amount, style, gainFactor, costFactor);
+    buy(amount = 1, style = "partial", gain = 1, cost = 1, override) {
+      return purchaseVariable(res, amount, style, gain, cost, override);
     },
-    sell(amount = 1, sellFactor) {
+    sell(amount = 1, style = "full", gain = 1, cost = 1, override) {
       return res.buy(
         typeof amount !== "object" || amount instanceof Decimal
           ? Decimal.neg(amount)
           : Obj.map(amount, (n) => -(n ?? 0)),
-        "full",
-        1,
-        sellFactor,
+        style,
+        gain,
+        cost,
+        override,
       );
     },
     add(amount, gainFactor) {
       return res.buy(amount, "free", gainFactor);
     },
-    canBuy(amount, costFactor) {
-      return res.buy(amount, "dry-partial", 1, costFactor);
+    canBuy(amount, costFactor, countOverride) {
+      return res.buy(amount, "dry-partial", 1, costFactor, countOverride);
     },
 
     execution: {},
@@ -220,15 +228,10 @@ export function genResourceManager<Context, TickResult>(
     get: (resource) => resolve(rm, resource),
 
     canAfford: (cost) => canAfford(resolveAll(rm, cost)),
-    purchase: (toBuy, style = "partial", gainFactor = 1, costFactor = 1) =>
-      purchase(rm, toBuy, style, gainFactor, costFactor),
-    purchaseAll: (
-      limitResources = [],
-      amount = 1,
-      style = "partial",
-      gainFactor = 1,
-      costFactor = 1,
-    ) => purchaseAll(rm, limitResources, amount, style, gainFactor, costFactor),
+    purchase: (toBuy, style = "partial", gain = 1, cost = 1, override) =>
+      purchase(rm, toBuy, style, gain, cost, override),
+    purchaseAll: (ress = {}, amount = 1, style, gain = 1, cost = 1, override) =>
+      purchaseAll(rm, ress, amount, style ?? "partial", gain, cost, override),
 
     update: (now, source) => update(rm, now ?? Date.now(), source ?? "unknown"),
     execution: {},
@@ -458,51 +461,54 @@ function canAfford<C, R>(cost: ResolvedRC<C, R>[], toSpend = true): boolean {
 
 function purchaseVariable<C, R>(
   resource: Resource<C, R>,
-  count: PurchaseAmount,
+  amount: PurchaseAmount,
   style: PurchaseStyle,
   gainFactor: DecimalSource,
   costFactor: DecimalSource,
+  countOverride?: DecimalSource,
 ): PurchaseCost<C, R> {
-  if (typeof count !== "object" || count instanceof Decimal) {
+  if (typeof amount !== "object" || amount instanceof Decimal) {
     return purchase(
       resource.manager,
-      [{ resource, count }],
+      [{ resource, count: amount }],
       style,
       gainFactor,
       costFactor,
+      countOverride,
     );
   }
 
-  const currentCount = resource.value().toNumber();
+  const current = getResourceCount(resource, countOverride).toNumber();
   if (
-    !isFinite(currentCount) ||
-    Math.abs(count.minAmount) > Math.abs(count.maxAmount) ||
-    Math.abs(count.maxAmount) > 1000 ||
-    count.increments === 0
+    !isFinite(current) ||
+    Math.abs(amount.minAmount) > Math.abs(amount.maxAmount) ||
+    Math.abs(amount.maxAmount) > 1000 ||
+    amount.increments === 0
   ) {
     return { count: 0, style, gain: [], cost: [] };
   }
 
   const minCount = resource.minCount?.toNumber() ?? 0,
     maxCount = resource.maxCount?.toNumber() ?? Infinity,
-    increment = count.increments;
+    increment = amount.increments;
   function adjust(c: number) {
     return (
       clamp(
-        Math.floor((currentCount + c) / increment) * increment,
+        Math.floor((current + c) / increment) * increment,
         minCount,
         maxCount,
-      ) - currentCount
+      ) - current
     );
   }
 
   // Try to buy max amount allowed
   let toBuy = purchase(
     resource.manager,
-    [{ resource, count: adjust(count.maxAmount) }],
+    [{ resource, count: adjust(amount.maxAmount) }],
     "dry-partial",
     gainFactor,
     costFactor,
+    countOverride,
   );
   let pCount = (toBuy.count as Decimal).toNumber();
 
@@ -514,6 +520,7 @@ function purchaseVariable<C, R>(
       "dry-partial",
       gainFactor,
       costFactor,
+      countOverride,
     );
     pCount = (toBuy.count as Decimal).toNumber();
   }
@@ -521,8 +528,8 @@ function purchaseVariable<C, R>(
   // Can't afford anything
   if (
     pCount === 0 ||
-    (count.minAmount >= 0 && pCount < count.minAmount) ||
-    (count.minAmount < 0 && pCount > count.minAmount)
+    (amount.minAmount >= 0 && pCount < amount.minAmount) ||
+    (amount.minAmount < 0 && pCount > amount.minAmount)
   ) {
     if (!style.includes("dry")) {
       return { count: 0, style, gain: [], cost: [] };
@@ -531,8 +538,8 @@ function purchaseVariable<C, R>(
     const adjusted = adjust(
       clamp(
         increment,
-        Math.min(count.minAmount, count.maxAmount),
-        Math.max(count.minAmount, count.maxAmount),
+        Math.min(amount.minAmount, amount.maxAmount),
+        Math.max(amount.minAmount, amount.maxAmount),
       ),
     );
     toBuy = purchase(
@@ -541,6 +548,7 @@ function purchaseVariable<C, R>(
       "dry-full",
       gainFactor,
       costFactor,
+      countOverride,
     );
     pCount = (toBuy.count as Decimal).toNumber();
   }
@@ -554,6 +562,7 @@ function purchaseVariable<C, R>(
       style,
       gainFactor,
       costFactor,
+      countOverride,
     );
   }
 }
@@ -564,6 +573,7 @@ function purchase<C, R>(
   style: PurchaseStyle,
   gainFactor: DecimalSource,
   costFactor: DecimalSource,
+  countOverride?: DecimalSource,
 ): PurchaseCost<C, R> {
   gainFactor = rm.gainFactor ? rm.gainFactor(gainFactor) : gainFactor;
   costFactor = rm.costFactor ? rm.costFactor(costFactor) : costFactor;
@@ -576,6 +586,7 @@ function purchase<C, R>(
       style,
       resource.gainFactor ? resource.gainFactor(gainFactor) : gainFactor,
       resource.costFactor ? resource.costFactor(costFactor) : costFactor,
+      countOverride,
     );
 
     if (style.includes("dry") || Decimal.eq(rcCost.count, 0)) {
@@ -614,24 +625,30 @@ function purchase<C, R>(
 
 function purchaseAll<C, R>(
   rm: ResourceManager<C, R>,
-  limitResources: (Resource<C, R> | string)[],
+  resources: Record<string, DecimalSource | undefined>,
   amount: PurchaseAmount,
   style: PurchaseStyle,
   gainFactor: DecimalSource,
   costFactor: DecimalSource,
+  countOverride?: DecimalSource,
 ): PurchaseCost<C, R> {
-  let resources = Object.values(rm.resources).filter(
+  let toBuy = Object.values(rm.resources).filter(
     (res) => (res.unlocked ?? true) && !res.disabled,
   );
-  if (limitResources && limitResources.length > 0) {
-    limitResources = limitResources.map((res) =>
-      typeof res === "string" ? res : res.name,
-    );
-    resources = resources.filter((res) => limitResources.includes(res.name));
+  const limits = Object.keys(resources);
+  if (limits.length > 0) {
+    toBuy = toBuy.filter((res) => limits.includes(res.name));
   }
 
-  const costs = resources.map((res) => {
-    return purchaseVariable(res, amount, style, gainFactor, costFactor);
+  const costs = toBuy.map((res) => {
+    return purchaseVariable(
+      res,
+      amount,
+      style,
+      gainFactor,
+      costFactor,
+      resources[res.name] ?? countOverride,
+    );
   });
   return {
     count: costs.reduce((count, rc) => count.plus(rc.count), Decimal.dZero),
@@ -644,18 +661,19 @@ function purchaseAll<C, R>(
 function getPurchaseCost<C, R>(
   rm: ResourceManager<C, R>,
   resource: Resource<C, R>,
-  count: DecimalSource,
+  amount: DecimalSource,
   style: PurchaseStyle,
   gainFactor: DecimalSource,
   costFactor: DecimalSource,
+  countOverride?: DecimalSource,
 ): PurchaseCost<C, R> {
-  if (!resource || Decimal.eq(count, 0)) {
+  if (!resource || Decimal.eq(amount, 0)) {
     return { count: 0, style, gain: [], cost: [] };
   }
 
-  let start = resource.count;
+  let start = getResourceCount(resource, countOverride);
   let target = start
-    .plus(count)
+    .plus(amount)
     .clamp(resource.minCount ?? 0, resource.maxCount ?? Infinity);
 
   if (style === "free") {
@@ -713,6 +731,24 @@ function getPurchaseCost<C, R>(
       gain: [{ resource, count: Decimal.mul(gainFactor, partialCount) }],
       cost,
     };
+  }
+}
+
+function getResourceCount(res?: Resource, override?: DecimalSource): Decimal {
+  if (override != null) {
+    if (
+      res != null &&
+      typeof override === "string" &&
+      res.extra[override] != null
+    ) {
+      return Decimal.fromValue_noAlloc(res.extra[override]);
+    } else {
+      return Decimal.fromValue_noAlloc(override);
+    }
+  } else if (res != null) {
+    return res.count;
+  } else {
+    return Decimal.dNaN;
   }
 }
 

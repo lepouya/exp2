@@ -22,7 +22,11 @@ export default function Main() {
         <hr className="separator" />
         <div className="three-quarters"></div>
         <div className="quarter">
-          <BuyButton.BuyAllButton />
+          <BuyButton.BuyAllButton
+            resources={xRes.slice(1)}
+            showNames={false}
+            overrideCount="manual"
+          />
         </div>
         <div className="full right">
           Buy multiples: &nbsp;
@@ -51,7 +55,7 @@ function RenderDerivative(props: { resource: Resource<Context> }) {
       <div className="quarter">
         <BuyButton
           resource={props.resource}
-          overrideCount={props.resource.extra.manual}
+          overrideCount={"manual"}
           overrideBuyAmount={props.resource.name === "x_0" ? "+1" : undefined}
           prefix={props.resource.name === "x_0" ? "" : "Buy"}
         />
