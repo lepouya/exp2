@@ -1,37 +1,29 @@
 import { MouseEvent, PropsWithChildren, useEffect, useState } from "react";
 
+import Arr from "../utils/arrays";
+
 export type ToggleButtonProps = {
   enabled?: boolean;
-
   checked?: boolean;
   onChange?: (checked: boolean) => void;
-
   checkedContents?: JSX.Element | string;
   unCheckedContents?: JSX.Element | string;
-
   className?: string;
   style?: React.CSSProperties;
 };
 
 export default function ToggleButton({
   enabled = true,
-
   checked = false,
   onChange,
-
   checkedContents,
   unCheckedContents,
-
   className,
   style,
-
   children,
 }: PropsWithChildren<ToggleButtonProps>) {
   const [toggle, setToggle] = useState(false);
-
-  useEffect(() => {
-    setToggle(checked);
-  }, [checked]);
+  useEffect(() => setToggle(checked), [checked]);
 
   function triggerToggle(event: MouseEvent) {
     event.preventDefault();
@@ -45,15 +37,17 @@ export default function ToggleButton({
     }
   }
 
-  const classNames = [
-    "toggle-button",
-    `toggle-button-${enabled ? "en" : "dis"}abled`,
-    `toggle-button-${checked ? "" : "un"}checked`,
-    className,
-  ].filter((s) => !!s);
-
   return (
-    <div onClick={triggerToggle} className={classNames.join(" ")} style={style}>
+    <div
+      onClick={triggerToggle}
+      className={Arr.className([
+        className,
+        "toggle-button",
+        `${enabled ? "en" : "dis"}abled`,
+        `${checked ? "" : "un"}checked`,
+      ])}
+      style={style}
+    >
       <div className="check">
         <div>{checkedContents}</div>
       </div>

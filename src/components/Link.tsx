@@ -8,20 +8,15 @@ export type LinkProps = PropsWithChildren<{
 }>;
 
 export default function Link(props: LinkProps) {
-  if (props.condition != null && !props.condition) {
+  if (!(props.condition ?? true)) {
     return null;
   }
 
   const location = useLocation();
-  let title = props.to.replace(/\W/g, "");
-  if (title === "") {
-    title = "main";
-  }
-
   return (
-    <div id={`tab-${title}`}>
+    <div id={`tab-${props.to.replace(/\W/g, "") || "main"}`}>
       <NavLink
-        className={({ isActive }) => (isActive ? "active" : "")}
+        className={({ isActive }) => (isActive ? "active" : undefined)}
         to={{ pathname: props.to, search: location.search }}
       >
         {props.children}

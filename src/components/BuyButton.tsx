@@ -1,7 +1,8 @@
 import Decimal, { DecimalSource } from "break_eternity.js";
-import { MouseEvent, useState } from "react";
+import { MouseEvent } from "react";
 
 import { Resource, ResourceCount } from "../model/Resource";
+import Arr from "../utils/arrays";
 import Format from "../utils/format";
 import useGameContext from "./GameContext";
 import Icon from "./Icon";
@@ -88,15 +89,10 @@ export default function BuyButton({
         prec: precision,
         alwaysShowSign: true,
       });
-      const color = !res.valueSign
-        ? "zero"
-        : res.valueSign > 0
-        ? "positive"
-        : "negative";
       return (
         <div className="resource" key={res.name}>
           {i > 0 && <div className="prefix">{and}</div>}
-          <div className={color}>{res.value}</div>
+          <div className={res.valueSign}>{res.value}</div>
           <div>
             {resource.icon && <Icon icon={resource.icon} size="1em" />}
             {res.name}
@@ -131,13 +127,13 @@ export default function BuyButton({
       : res.sell(amount, "dry-full", 1, costFactor, overrideCount);
   const active = context.resourceManager.canAfford(tx.cost);
   const hasCost = tx.cost.some(({ count }) => Decimal.neq(count, 0));
-  const classNames = [className, "buy-button", (active ? "" : "in") + "active"];
+  const classNames = [className, "buy-button", active || "inactive"];
 
   return (
     <button
       onClick={(e) => doPurchase(active && enabled ? tx.count : 0, e)}
       disabled={!active || !enabled}
-      className={classNames.filter((s) => !!s).join(" ")}
+      className={Arr.className(classNames)}
       style={style}
       id={`button-buy-${res.name}`}
     >
@@ -152,36 +148,25 @@ export default function BuyButton({
 
 BuyButton.BuyAmountButtons = () => {
   const { settings } = useGameContext();
-  const [buyAmount, setBuyAmount] = useState(settings.buyAmount);
-
-  function getClassName(buyMode: string) {
-    return buyMode === buyAmount ? "selected" : "unselected";
-  }
-
-  function setBuyMode(event: React.MouseEvent) {
-    event.preventDefault();
-    settings.buyAmount = (event.target as HTMLInputElement).value;
-    setBuyAmount(settings.buyAmount);
-  }
-
-  const buttons = Object.keys(buyAmounts).sort((a, b) =>
-    a.substring(1).localeCompare(b.substring(1)),
-  );
-
   return (
     <>
-      {buttons.map((value) => (
-        <button
-          value={value}
-          key={value}
-          className={`buy-amount-button ${getClassName(value)}`}
-          onClick={setBuyMode}
-          id={`button-${value.replace(/\W/g, "")}`}
-        >
-          {buyIcons[value[0]] && <Icon icon={buyIcons[value[0]]} />}
-          {value.replace(/^[+x]/, "").toUpperCase()}
-        </button>
-      ))}
+      {Object.keys(buyAmounts)
+        .sort((a, b) => a.substring(1).localeCompare(b.substring(1)))
+        .map((value) => (
+          <button
+            value={value}
+            key={value}
+            className={Arr.className(
+              "buy-amount-button",
+              value === settings.buyAmount && "selected",
+            )}
+            onClick={(e: any) => (settings.buyAmount = e.target.value)}
+            id={`button-${value.replace(/\W/g, "")}`}
+          >
+            {buyIcons[value[0]] && <Icon icon={buyIcons[value[0]]} />}
+            {value.replace(/^[+x]/, "").toUpperCase()}
+          </button>
+        ))}
     </>
   );
 };
@@ -234,7 +219,7 @@ BuyButton.BuyAllButton = ({
   suffix = "",
   infix = "of",
   and = " & ",
-  all = "all",
+  all = "everything",
 
   className,
   style,
@@ -289,7 +274,7 @@ BuyButton.BuyAllButton = ({
     <button
       onClick={doPurchase}
       disabled={!enabled}
-      className={`buy-all-button ${className}`}
+      className={Arr.className("buy-all-button", className)}
       style={style}
     >
       {prefix && <div className="prefix">{prefix}</div>}

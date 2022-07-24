@@ -3,6 +3,7 @@
 import { MouseEventHandler, useEffect, useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 
+import Arr from "../utils/arrays";
 import { getHTMLElement } from "../utils/document";
 import { Expansion, KeysUnion } from "../utils/types";
 import Icon, { IconProps } from "./Icon";
@@ -88,11 +89,11 @@ function genToast(options: ToastOptions) {
 function renderAllToasts() {
   root.render(
     Object.keys(rows).map((row) => (
-      <div key={row} className={`row ${row}`}>
+      <div key={row} className={Arr.className("row", row)}>
         {Object.keys(groups).map((group) => {
           const type = `${row}-${group}`;
           return (
-            <div key={type} className={`group ${group}`}>
+            <div key={type} className={Arr.className("group", group)}>
               {(all_toasts[type] ?? []).map((toast) => (
                 <Toast key={`toast_${type}_${toast.id}`} {...toast} />
               ))}
@@ -138,12 +139,12 @@ function Toast(props: ToastOptions) {
       : props.type
       ? { icon: icons[props.type] }
       : undefined;
-  const classNames = ["toast", shown, props.type, props.className]
-    .filter((s) => !!s)
-    .join(" ");
 
   return (
-    <div className={classNames} onClick={props.onClick ?? hide}>
+    <div
+      className={Arr.className("toast", shown, props.type, props.className)}
+      onClick={props.onClick ?? hide}
+    >
       {icon && <Icon {...icon} />}
       <div>
         {props.heading && <h4>{props.heading}</h4>}

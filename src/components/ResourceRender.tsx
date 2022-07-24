@@ -1,4 +1,5 @@
 import { Resource } from "../model/Resource";
+import Arr from "../utils/arrays";
 import Format from "../utils/format";
 import useGameContext from "./GameContext";
 import Icon from "./Icon";
@@ -9,7 +10,6 @@ export type ResourceRenderProps = {
   epoch?: number;
   length?: "tiny" | "short" | "long";
   precision?: number;
-  reversedDirection?: boolean;
 
   showLocked?: boolean;
   showIcon?: boolean;
@@ -44,7 +44,6 @@ export default function ResourceRender({
   epoch,
   length,
   precision,
-  reversedDirection,
 
   showLocked,
   showIcon = true,
@@ -89,42 +88,22 @@ export default function ResourceRender({
   });
 
   let output: JSX.Element[] = [];
-  function addValueDiv(
-    val?: string,
-    sign?: number,
-    key?: string,
-    color = showColors,
-    paren = false,
-  ) {
+  function mkDiv(val = "", sign = "", key = "", color = false, paren = false) {
     if (
-      !val ||
-      (!showNegatives && sign != null && sign < 0) ||
-      (!showZeros && sign != null && sign === 0)
+      val &&
+      (showNegatives || sign != "negative") &&
+      (showZeros || sign != "zero")
     ) {
-      return;
+      output.push(
+        <div
+          key={`${key}-${output.length + 1}`}
+          className={Arr.className(key, color && sign)}
+        >
+          {paren ? `(${val})` : val}
+        </div>,
+      );
     }
-
-    const classes = [];
-    if (key) {
-      classes.push(key);
-    }
-    if (color) {
-      sign = (sign ?? 0) * (reversedDirection ? -1 : 1);
-      classes.push(sign > 0 ? "positive" : sign < 0 ? "negative" : "zero");
-    }
-
-    if (paren) {
-      val = "(" + val + ")";
-    }
-
-    output.push(
-      <div key={`${key}-${output.length + 1}`} className={classes.join(" ")}>
-        {val}
-      </div>,
-    );
   }
-
-  const classNames = ["resource", resource.display?.toString()];
 
   if ((showIcon && resource.icon) || (showName && res.name)) {
     output.push(
@@ -138,11 +117,11 @@ export default function ResourceRender({
 
   if (showValue && res.value) {
     const denom = showMaxValue && res.max ? " / " + res.max : "";
-    addValueDiv(res.value + denom, res.valueSign, "value");
+    mkDiv(res.value + denom, res.valueSign, "value", showColors);
   }
 
-  if (showRate && res.rate && (showZeroRates || res.rateSign !== 0)) {
-    addValueDiv(res.rate, res.rateSign, "rate", showRateColors, showValue);
+  if (showRate && res.rate && (showZeroRates || res.rateSign !== "zero")) {
+    mkDiv(res.rate, res.rateSign, "rate", showRateColors, showValue);
   }
 
   if (showExtras && res.extras && Object.keys(res.extras).length > 0) {
@@ -160,10 +139,11 @@ export default function ResourceRender({
           {infix ?? ":"}
         </div>,
       );
-      addValueDiv(res.extras[k], undefined, "extra-value");
+      mkDiv(res.extras[k], undefined, "extra-value");
     }
   }
 
+  const classNames = ["resource", resource.display, showChrome && className];
   if (!showLocked && !(resource.unlocked ?? true)) {
     classNames.push("locked");
     output = [
@@ -173,12 +153,11 @@ export default function ResourceRender({
     ];
   }
 
-  const resStyle = showChrome ? undefined : style;
-  if (!!className && !showChrome) {
-    classNames.push(className);
-  }
   const ret = (
-    <div className={classNames.join(" ")} style={resStyle}>
+    <div
+      className={Arr.className(classNames)}
+      style={showChrome ? style : undefined}
+    >
       {prefix && <div className="prefix">{prefix}</div>}
       {output}
       {suffix && <div className="suffix">{suffix}</div>}
@@ -187,7 +166,7 @@ export default function ResourceRender({
 
   if (showChrome) {
     return (
-      <div className={!className ? undefined : className} style={style}>
+      <div className={Arr.className(className)} style={style}>
         {ret}
       </div>
     );

@@ -1,45 +1,39 @@
 import { PropsWithChildren } from "react";
 
+import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
 
-export type ProgressBarProps = PropsWithChildren<{
+export type ProgressBarProps = {
   value?: number;
   minValue?: number;
   maxValue?: number;
-
   orientation?: "horizontal" | "vertical";
   width?: string | number;
   height?: string | number;
-
   showPercent?: boolean;
   enabled?: boolean;
-
   className?: string;
-}>;
+};
 
 export default function ProgressBar({
   value = NaN,
   minValue = 0.0,
   maxValue = 1.0,
-
   orientation = "horizontal",
   width = orientation === "horizontal" ? "100%" : "1ex",
   height = orientation === "vertical" ? "100%" : "1ex",
-
-  showPercent = false,
-  enabled = !isNaN(value),
-
+  showPercent,
+  enabled = isFinite(value),
   className,
-
   children,
-}: ProgressBarProps) {
+}: PropsWithChildren<ProgressBarProps>) {
   const pct = clamp((value - minValue) / (maxValue - minValue));
   const endX = orientation === "horizontal" ? pct : 1;
   const endY = orientation === "vertical" ? pct : 1;
 
   return (
     <div
-      className={`progress-bar ${className ?? ""}`}
+      className={Arr.className("progress-bar", className)}
       style={{ minWidth: width, minHeight: height }}
     >
       <div className="children">

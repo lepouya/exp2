@@ -1,8 +1,9 @@
 import { PropsWithChildren } from "react";
 
+import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
 
-export type ProgressCircleProps = PropsWithChildren<{
+export type ProgressCircleProps = {
   value: number;
   startValue?: number;
   minValue?: number;
@@ -11,7 +12,7 @@ export type ProgressCircleProps = PropsWithChildren<{
   height?: string | number;
   showPercent?: boolean;
   className?: string;
-}>;
+};
 
 export default function ProgressCircle({
   value,
@@ -20,10 +21,10 @@ export default function ProgressCircle({
   maxValue = 1.0,
   width = "100px",
   height = width,
-  showPercent = false,
+  showPercent,
   className,
   children,
-}: ProgressCircleProps) {
+}: PropsWithChildren<ProgressCircleProps>) {
   const pct = clamp((value - minValue) / (maxValue - minValue));
   const startAngle =
     (clamp(((startValue ?? 0) - minValue) / (maxValue - minValue)) - 0.25) *
@@ -32,7 +33,7 @@ export default function ProgressCircle({
 
   return (
     <div
-      className={`progress-circle ${className ?? ""}`}
+      className={Arr.className("progress-circle", className)}
       style={{ minWidth: width, minHeight: height }}
     >
       <div className="children">

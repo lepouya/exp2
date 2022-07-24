@@ -238,7 +238,7 @@ Format.resource = function <Context, TickResult>(
       value = Format(count, options);
     }
 
-    valueSign = count.cmp_tolerance(Decimal.dZero, options.tolerance);
+    valueSign = signs[count.cmp_tolerance(Decimal.dZero, options.tolerance)];
   }
 
   options.count ??= count ? count.toNumber() : undefined;
@@ -285,8 +285,14 @@ Format.resource = function <Context, TickResult>(
       rate = rate + "/s";
     }
 
-    rateSign = Decimal.cmp_tolerance(rateValue, 0, options.tolerance);
+    rateSign = signs[Decimal.cmp_tolerance(rateValue, 0, options.tolerance)];
   }
 
   return { name, value, valueSign, max, rate, rateSign, extras };
+};
+
+const signs: Record<-1 | 0 | 1, "negative" | "zero" | "positive"> = {
+  [-1]: "negative",
+  [0]: "zero",
+  [1]: "positive",
 };

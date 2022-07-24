@@ -1,3 +1,5 @@
+import { AtomicType, BaseType } from "./types";
+
 export default function Arr(...args: any[]) {
   return [...args];
 }
@@ -15,4 +17,15 @@ Arr.shuffle = function <T>(array: T[]): T[] {
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
+};
+
+Arr.className = function <T = BaseType | AtomicType>(
+  val: T | T[],
+  ...rest: T[]
+): string | undefined {
+  const classes = [...(Array.isArray(val) ? val : [val]), ...rest]
+    .map((s) => (s ? String(s) : undefined))
+    .filter((s) => !!s)
+    .join(" ");
+  return !!classes ? classes : undefined;
 };

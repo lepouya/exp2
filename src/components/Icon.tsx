@@ -1,4 +1,5 @@
 import tablerIcons from "../../assets/sprites/tabler-sprite-nostroke.svg";
+import Arr from "../utils/arrays";
 import { getHTMLElement } from "../utils/document";
 
 export type IconProps = {
@@ -15,21 +16,15 @@ export default function Icon(props: IconProps) {
   const icon = parts.pop() ?? props.icon;
   let color = parts.pop() ?? props.color;
 
-  const classNames = ["icon"];
-  if (icon) {
-    classNames.push("icon-" + icon);
-  }
+  const classNames = ["icon", icon && "icon-" + icon, props.className];
   if (color && !color.startsWith("#")) {
     classNames.push(color);
     color = undefined;
   }
-  if (props.className) {
-    classNames.push(props.className);
-  }
 
   return (
     <svg
-      className={classNames.join(" ")}
+      className={Arr.className(classNames)}
       width={props.size}
       height={props.size}
       color={color}
