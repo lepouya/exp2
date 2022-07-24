@@ -2,7 +2,6 @@ import Decimal, { DecimalSource } from "break_eternity.js";
 import { MouseEvent, useState } from "react";
 
 import { Resource, ResourceCount } from "../model/Resource";
-import clamp from "../utils/clamp";
 import Fn from "../utils/function";
 import useGameContext from "./GameContext";
 import Icon from "./Icon";
@@ -23,8 +22,6 @@ export type BuyButtonProps = {
   mode?: "buy" | "sell";
 
   overrideCount?: DecimalSource;
-  overrideMaxCount?: DecimalSource;
-  overrideMinCount?: DecimalSource;
   overrideBuyAmount?: string;
 
   prefix?: string;
@@ -53,8 +50,6 @@ export default function BuyButton({
   mode = "buy",
 
   overrideCount,
-  overrideMaxCount,
-  overrideMinCount,
   overrideBuyAmount,
 
   prefix = "Buy",
@@ -80,7 +75,7 @@ export default function BuyButton({
   increment ??= amounts.inc;
 
   if (!(res.unlocked ?? true)) {
-    if (allowUnlocking) {
+    if (allowUnlocking && res.unlockCost) {
       minNum = maxNum = increment = 1;
     } else {
       minNum = maxNum = increment = 0;
@@ -92,15 +87,11 @@ export default function BuyButton({
     [minNum, maxNum, increment] = [-minNum, -maxNum, -increment];
   }
 
-  if (overrideCount != undefined) {
-    res.count = Decimal.fromValue(overrideCount);
-  }
-
   function renderResourceCounts(rcs: ResourceCount[], multiplier: Decimal) {
     return rcs.map((rc, i) => (
       <ResourceRender
         resource={rc.resource}
-        override={{ count: multiplier.multiply(rc.count) }}
+        override={{ count: multiplier.mul(rc.count) }}
         precision={precision}
         infix=""
         placeholder=""
@@ -120,7 +111,7 @@ export default function BuyButton({
 
   function doPurchase(count: DecimalSource, event: MouseEvent) {
     event.preventDefault();
-    if (!enabled || Decimal.fromValue(count).equals(Decimal.dZero)) {
+    if (!enabled || Decimal.eq(count, 0)) {
       return;
     }
 
@@ -137,86 +128,38 @@ export default function BuyButton({
     }
   }
 
-  function adjustCount(count: DecimalSource = Decimal.dZero) {
-    const currentCount = res.value();
-    return currentCount
-      .plus(count)
-      .divide(increment ?? Decimal.dOne)
-      .floor()
-      .multiply(increment ?? Decimal.dOne)
-      .clamp(
-        Decimal.max(
-          overrideMinCount ?? Decimal.dNegInf,
-          res.minCount ?? Decimal.dZero,
-        ),
-        Decimal.min(
-          overrideMaxCount ?? Decimal.dInf,
-          res.maxCount ?? Decimal.dInf,
-        ),
-      )
-      .minus(currentCount);
+  if (overrideCount != undefined) {
+    res.count = Decimal.fromValue(overrideCount);
   }
-
-  let active = true;
-  let purchase = res.buy(
-    adjustCount(maxNum),
+  const purchase = res.buy(
+    { minAmount: minNum, maxAmount: maxNum, increments: increment },
     "dry-partial",
     gainMultiplier,
     costMultiplier,
   );
-  let pCount = Decimal.fromValue(purchase.count).toNumber();
-  if (pCount % increment !== 0) {
-    purchase = res.buy(
-      adjustCount(purchase.count),
-      "dry-partial",
-      gainMultiplier,
-      costMultiplier,
-    );
-    pCount = Decimal.fromValue(purchase.count).toNumber();
-  }
-  if (
-    (minNum >= 0 && pCount < minNum) ||
-    (minNum < 0 && pCount > minNum) ||
-    pCount === 0
-  ) {
-    const adjusted = adjustCount(
-      clamp(increment, Math.min(minNum, maxNum), Math.max(minNum, maxNum)),
-    );
-    purchase = res.buy(
-      adjusted.abs().lessThan(Decimal.dOne) ? Math.sign(increment) : adjusted,
-      "dry-full",
-      gainMultiplier,
-      costMultiplier,
-    );
-    pCount = Decimal.fromValue(purchase.count).toNumber();
-    active = false;
-  }
-
-  if (!enabled) {
-    purchase.cost = [];
-  }
-  const totalCost = purchase.cost.reduce(
-    (tot, rc) => tot.plus(rc.count),
-    Decimal.dZero,
-  );
-
   if (overrideCount != undefined) {
     res.count = originalCount;
   }
 
+  const affordable = resourceManager.canAfford(purchase.cost);
+  if (!enabled) {
+    purchase.cost = [];
+  }
+  const totalCost = purchase.cost.reduce(
+    (tot, rc) => tot.plus(Decimal.abs(rc.count)),
+    Decimal.dZero,
+  );
+
   const classNames = [
     "buy-button",
-    `buy-button-${active ? "" : "un"}affordable`,
+    `buy-button-${affordable ? "" : "un"}affordable`,
     className,
   ].filter((s) => !!s);
 
   return (
     <button
-      onClick={Fn.apply(
-        doPurchase,
-        active && enabled ? purchase.count : Decimal.dZero,
-      )}
-      disabled={!active || !enabled}
+      onClick={Fn.apply(doPurchase, affordable && enabled ? purchase.count : 0)}
+      disabled={!affordable || !enabled}
       className={classNames.join(" ")}
       style={style}
       id={`button-buy-${res.name}`}

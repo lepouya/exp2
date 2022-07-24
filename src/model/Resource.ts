@@ -33,22 +33,22 @@ export type Resource<Context = any, TickResult = any> = {
   tick?: (dt: number, source?: string) => Nullable<TickResult>;
 
   buy: (
-    count?: DecimalSource,
+    amount?: PurchaseAmount,
     style?: PurchaseStyle,
     gainFactor?: DecimalSource,
     costFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   sell: (
-    count?: DecimalSource,
+    amount?: PurchaseAmount,
     sellFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
   add: (
-    count?: DecimalSource,
+    amount?: PurchaseAmount,
     gainFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
   canBuy: (
-    count?: DecimalSource,
+    amount?: PurchaseAmount,
     costFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
 
@@ -134,12 +134,19 @@ export type PurchaseStyle =
   | "dry-full"
   | "dry-partial";
 
+export type PurchaseAmount =
+  | DecimalSource
+  | {
+      minAmount: number;
+      maxAmount: number;
+      increments: number;
+    };
+
 export type PurchaseCost<Context = any, TickResult = any> = {
   count: DecimalSource;
   style: PurchaseStyle;
   gain: ResolvedRC<Context, TickResult>[];
   cost: ResolvedRC<Context, TickResult>[];
-  partialCosts?: ResolvedRC<Context, TickResult>[][];
 };
 
 export function genResource<Context, TickResult>(
@@ -152,17 +159,32 @@ export function genResource<Context, TickResult>(
     count: Decimal.dZero,
     extra: {},
 
-    value: () => res.count.clamp(res.minCount ?? 0, res.maxCount ?? Infinity),
-    cost: () => [],
+    value() {
+      return res.count.clamp(res.minCount ?? 0, res.maxCount ?? Infinity);
+    },
+    cost() {
+      return [];
+    },
 
-    buy: (count = 1, style = "partial", gainFactor = 1, costFactor = 1) =>
-      purchase(rm, [{ resource: res, count }], style, gainFactor, costFactor),
-    sell: (count, sellFactor) =>
-      res.buy(Decimal.neg(count ?? 1), undefined, undefined, sellFactor),
-    add: (count, gainFactor) => res.buy(count, "free", gainFactor),
-
-    canBuy: (count, costFactor) =>
-      res.buy(count, "dry-partial", undefined, costFactor),
+    buy(amount = 1, style = "partial", gainFactor = 1, costFactor = 1) {
+      return purchaseVariable(res, amount, style, gainFactor, costFactor);
+    },
+    sell(amount = 1, sellFactor) {
+      return res.buy(
+        typeof amount !== "object" || amount instanceof Decimal
+          ? Decimal.neg(amount)
+          : Obj.map(amount, (n) => -(n ?? 0)),
+        "full",
+        1,
+        sellFactor,
+      );
+    },
+    add(amount, gainFactor) {
+      return res.buy(amount, "free", gainFactor);
+    },
+    canBuy(amount, costFactor) {
+      return res.buy(amount, "dry-partial", 1, costFactor);
+    },
 
     execution: {},
     rate: { count: Decimal.dZero, ticks: 0, pastCounts: [], pastTicks: [] },
@@ -205,6 +227,16 @@ function resolve<C, R>(
     rm.resources[typeof res === "string" ? res : res.name ?? ""] ??
     upsert(rm, res)
   );
+}
+
+type ResolvedRC<C, R> = { resource: Resource<C, R>; count: DecimalSource };
+function resolveAll<C, R>(
+  rm: ResourceManager<C, R>,
+  rcs: ResourceCount<C, R>[],
+): ResolvedRC<C, R>[] {
+  return rcs
+    .map(({ resource, count }) => ({ resource: resolve(rm, resource), count }))
+    .filter(({ resource, count }) => resource && Decimal.neq(count, 0));
 }
 
 function upsert<C, R>(
@@ -398,6 +430,116 @@ function update<C, R>(
   return rm.execution[source].lastResult;
 }
 
+function canAfford<C, R>(cost: ResolvedRC<C, R>[], toSpend = true): boolean {
+  return combineResources(cost).every(
+    ({ resource, count }) =>
+      (resource.unlocked ?? true) &&
+      resource.count.minus(count).gte(toSpend ? resource.minCount ?? 0 : 0),
+  );
+}
+
+function purchaseVariable<C, R>(
+  resource: Resource<C, R>,
+  count: PurchaseAmount,
+  style: PurchaseStyle,
+  gainFactor: DecimalSource,
+  costFactor: DecimalSource,
+): PurchaseCost<C, R> {
+  if (typeof count !== "object" || count instanceof Decimal) {
+    return purchase(
+      resource.manager,
+      [{ resource, count }],
+      style,
+      gainFactor,
+      costFactor,
+    );
+  }
+
+  const currentCount = resource.value().toNumber();
+  if (
+    !isFinite(currentCount) ||
+    Math.abs(count.minAmount) > Math.abs(count.maxAmount) ||
+    Math.abs(count.maxAmount) > 1000 ||
+    count.increments === 0
+  ) {
+    return { count: 0, style, gain: [], cost: [] };
+  }
+
+  const minCount = resource.minCount?.toNumber() ?? 0,
+    maxCount = resource.maxCount?.toNumber() ?? Infinity,
+    increment = count.increments;
+  function adjust(c: number) {
+    return (
+      clamp(
+        Math.floor((currentCount + c) / increment) * increment,
+        minCount,
+        maxCount,
+      ) - currentCount
+    );
+  }
+
+  // Try to buy max amount allowed
+  let toBuy = purchase(
+    resource.manager,
+    [{ resource, count: adjust(count.maxAmount) }],
+    "dry-partial",
+    gainFactor,
+    costFactor,
+  );
+  let pCount = (toBuy.count as Decimal).toNumber();
+
+  // Something partial came back, so adjust it to increments
+  if (pCount % increment !== 0) {
+    toBuy = purchase(
+      resource.manager,
+      [{ resource, count: adjust(pCount) }],
+      "dry-partial",
+      gainFactor,
+      costFactor,
+    );
+    pCount = (toBuy.count as Decimal).toNumber();
+  }
+
+  // Can't afford anything
+  if (
+    pCount === 0 ||
+    (count.minAmount >= 0 && pCount < count.minAmount) ||
+    (count.minAmount < 0 && pCount > count.minAmount)
+  ) {
+    if (!style.includes("dry")) {
+      return { count: 0, style, gain: [], cost: [] };
+    }
+
+    const adjusted = adjust(
+      clamp(
+        increment,
+        Math.min(count.minAmount, count.maxAmount),
+        Math.max(count.minAmount, count.maxAmount),
+      ),
+    );
+    toBuy = purchase(
+      resource.manager,
+      [{ resource, count: adjusted === 0 ? Math.sign(increment) : adjusted }],
+      "dry-full",
+      gainFactor,
+      costFactor,
+    );
+    pCount = (toBuy.count as Decimal).toNumber();
+  }
+
+  if (style.includes("dry")) {
+    return toBuy;
+  } else {
+    return purchase(
+      resource.manager,
+      [{ resource, count: pCount }],
+      style,
+      gainFactor,
+      costFactor,
+    );
+  }
+}
+
 function purchase<C, R>(
   rm: ResourceManager<C, R>,
   toBuy: ResourceCount<C, R>[],
@@ -449,26 +591,7 @@ function purchase<C, R>(
     style,
     gain: combineResources(costs.map((rcCost) => rcCost.gain).flat()),
     cost: combineResources(costs.map((rcCost) => rcCost.cost).flat()),
-    partialCosts: costs.length === 1 ? costs[0].partialCosts ?? [] : [],
   };
-}
-
-type ResolvedRC<C, R> = { resource: Resource<C, R>; count: DecimalSource };
-function resolveAll<C, R>(
-  rm: ResourceManager<C, R>,
-  rcs: ResourceCount<C, R>[],
-): ResolvedRC<C, R>[] {
-  return rcs
-    .map(({ resource, count }) => ({ resource: resolve(rm, resource), count }))
-    .filter(({ resource, count }) => resource && Decimal.neq(count, 0));
-}
-
-function canAfford<C, R>(cost: ResolvedRC<C, R>[], toSpend = true): boolean {
-  return combineResources(cost).every(
-    ({ resource, count }) =>
-      (resource.unlocked ?? true) &&
-      resource.count.minus(count).gte(toSpend ? resource.minCount ?? 0 : 0),
-  );
 }
 
 function getPurchaseCost<C, R>(
@@ -518,12 +641,10 @@ function getPurchaseCost<C, R>(
   }
 
   let partialCount = 0;
-  const partialCosts = [cost];
   for (let i = s; i < t; i++) {
     const curCost = resolveAll(rm, resource.cost(i + 1));
     curCost.forEach((rc) => (rc.count = Decimal.mul(rc.count, costFactor)));
     const partialCost = combineResources([...cost, ...curCost]);
-    partialCosts.push(partialCost);
 
     if (style.includes("partial") && !canAfford(partialCost)) {
       break;
@@ -537,14 +658,13 @@ function getPurchaseCost<C, R>(
     (!style.includes("dry") && !canAfford(cost)) ||
     (style === "full" && partialCount !== t - s)
   ) {
-    return { count: 0, style, gain: [], cost: [], partialCosts };
+    return { count: 0, style, gain: [], cost: [] };
   } else {
     return {
       count: partialCount * Decimal.sign(gainFactor),
       style,
       gain: [{ resource, count: Decimal.mul(gainFactor, partialCount) }],
       cost,
-      partialCosts,
     };
   }
 }
