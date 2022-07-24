@@ -44,8 +44,8 @@ export default function BuyButton({
   increment,
   precision = 0,
 
-  gainMultiplier = Decimal.dOne,
-  costMultiplier = Decimal.dOne,
+  gainMultiplier = 1,
+  costMultiplier = 1,
   mode = "buy",
 
   overrideCount,
@@ -150,7 +150,7 @@ export default function BuyButton({
       id={`button-buy-${res.name}`}
     >
       {prefix && <div className="prefix">{prefix}</div>}
-      {renderResourceCounts(tx.gain, 1)}
+      {renderResourceCounts(tx.gain)}
       {hasCost && enabled && infix && <div className="infix">{infix}</div>}
       {hasCost && enabled && renderResourceCounts(tx.cost, -1)}
       {suffix && <div className="suffix">{suffix}</div>}
@@ -158,7 +158,7 @@ export default function BuyButton({
   );
 }
 
-export function BuyAmountButtons() {
+BuyButton.BuyAmountButtons = () => {
   const { settings } = useGameContext();
   const [buyAmount, setBuyAmount] = useState(settings.buyAmount);
 
@@ -192,7 +192,113 @@ export function BuyAmountButtons() {
       ))}
     </>
   );
-}
+};
+
+export type BuyAllButtonProps = {
+  resources?: (string | Resource)[];
+  enabled?: boolean;
+  showNames?: boolean;
+
+  maxNum?: number;
+  minNum?: number;
+  increment?: number;
+  overrideBuyAmount?: string;
+
+  gainMultiplier?: DecimalSource;
+  costMultiplier?: DecimalSource;
+
+  prefix?: string;
+  infix?: string;
+  suffix?: string;
+  and?: string;
+  all?: string;
+
+  className?: string;
+  style?: React.CSSProperties;
+
+  onPurchase?: (rc: ResourceCount[]) => void;
+};
+
+BuyButton.BuyAllButton = ({
+  resources = [],
+  enabled = true,
+  showNames = true,
+
+  maxNum,
+  minNum,
+  increment,
+  overrideBuyAmount,
+
+  gainMultiplier = 1,
+  costMultiplier = 1,
+
+  prefix = "Buy",
+  suffix = "",
+  infix = "of",
+  and = " & ",
+  all = "all",
+
+  className,
+  style,
+  onPurchase,
+}: BuyAllButtonProps) => {
+  const context = useGameContext();
+  const buyAmount = overrideBuyAmount ?? context.settings.buyAmount ?? "+1";
+  const predefAmounts = buyAmounts[buyAmount] ?? buyAmounts["+1"];
+  const amount = {
+    minAmount: minNum ?? predefAmounts.min,
+    maxAmount: maxNum ?? predefAmounts.max,
+    increments: increment ?? predefAmounts.inc,
+  };
+
+  let names = all;
+  if (showNames && resources && resources.length > 0) {
+    names = resources
+      .map((res) => context.resourceManager.get(res))
+      .map((res) => res.singularName ?? res.pluralName ?? res.name)
+      .filter((name) => !!name)
+      .join(and);
+  }
+
+  function doPurchase(event: MouseEvent) {
+    event.preventDefault();
+    if (!enabled) {
+      return;
+    }
+
+    const bought = context.resourceManager.purchaseAll(
+      resources,
+      amount,
+      "partial",
+      gainMultiplier,
+      costMultiplier,
+    );
+
+    if (onPurchase && bought.gain.length > 0) {
+      onPurchase(bought.gain);
+    }
+  }
+
+  return (
+    <button
+      onClick={doPurchase}
+      disabled={!enabled}
+      className={`buy-all-button ${className}`}
+      style={style}
+    >
+      {prefix && <div className="prefix">{prefix}</div>}
+      <div className="icon">
+        {buyIcons[buyAmount[0]] && <Icon icon={buyIcons[buyAmount[0]]} />}
+      </div>
+      <div className="amount">
+        {buyAmount.replace(/^[+x]/, "").toUpperCase()}
+      </div>
+      {enabled && names && infix && <div className="infix">{infix}</div>}
+      {enabled && names && <div className="names">{names}</div>}
+      {suffix && <div className="suffix">{suffix}</div>}
+    </button>
+  );
+};
 
 const buyAmounts: Record<string, { min: number; max: number; inc: number }> = {
   "+1": { min: 1, max: 1, inc: 1 },
@@ -200,7 +306,7 @@ const buyAmounts: Record<string, { min: number; max: number; inc: number }> = {
   x100: { min: 1, max: 100, inc: 100 },
   "+10": { min: 10, max: 10, inc: 1 },
   "+100": { min: 100, max: 100, inc: 1 },
-  max: { min: 1, max: 100, inc: 1 },
+  max: { min: 1, max: 1000, inc: 1 },
 };
 
 const buyIcons: Record<string, string> = { x: "arrow-bar-to-right", "+": "x" };

@@ -1,4 +1,4 @@
-import BuyButton, { BuyAmountButtons } from "../components/BuyButton";
+import BuyButton from "../components/BuyButton";
 import useGameContext from "../components/GameContext";
 import ResourceRender from "../components/ResourceRender";
 import { Context } from "../model/Context";
@@ -20,9 +20,13 @@ export default function Main() {
           <RenderDerivative key={res.name} resource={res} />
         ))}
         <hr className="separator" />
+        <div className="three-quarters"></div>
+        <div className="quarter">
+          <BuyButton.BuyAllButton />
+        </div>
         <div className="full right">
           Buy multiples: &nbsp;
-          <BuyAmountButtons />
+          <BuyButton.BuyAmountButtons />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 # Todo plan
 
-- Buy all button
+- Resource count buy override
 
 # Things to experiment with
 

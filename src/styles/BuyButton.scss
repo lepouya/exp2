@@ -9,13 +9,6 @@ button.buy-button {
   align-items: center;
   align-content: flex-start;
   white-space: nowrap;
-
-  .resource {
-    flex-wrap: nowrap;
-    width: fit-content;
-    margin: 0;
-    padding: 0 0.5ex;
-  }
 }
 
 button.buy-amount-button {
@@ -27,9 +20,36 @@ button.buy-amount-button {
   justify-content: center;
   align-items: center;
   align-content: center;
+}
 
+button.buy-all-button {
+  width: 100%;
+
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+
+  .prefix,
+  .infix,
+  .suffix {
+    padding: 2px 0.5ex;
+  }
+}
+
+.buy-button,
+.buy-amount-button,
+.buy-all-button {
   &.selected {
     @include Theme.background($positive: 20%, $secondary: 100%);
+  }
+
+  .resource {
+    flex-wrap: nowrap;
+    width: fit-content;
+    margin: 0;
+    padding: 0 0.5ex;
   }
 
   .icon {
@@ -38,7 +58,7 @@ button.buy-amount-button {
     margin: 0;
 
     display: inline-block;
-    align-items: center;
-    vertical-align: middle;
+    align-items: baseline;
+    vertical-align: baseline;
   }
 }

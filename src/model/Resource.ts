@@ -93,13 +93,21 @@ export type ResourceManager<Context = any, TickResult = any> = {
   get: (
     resource: Resource<Context, TickResult> | string,
   ) => Resource<Context, TickResult>;
+
+  canAfford: (cost: ResourceCount<Context, TickResult>[]) => boolean;
   purchase: (
     toBuy: ResourceCount<Context, TickResult>[],
     style?: PurchaseStyle,
     gainFactor?: DecimalSource,
     costFactor?: DecimalSource,
   ) => PurchaseCost<Context, TickResult>;
-  canAfford: (cost: ResourceCount<Context, TickResult>[]) => boolean;
+  purchaseAll: (
+    limitResources?: (Resource<Context, TickResult> | string)[],
+    amount?: PurchaseAmount,
+    style?: PurchaseStyle,
+    gainFactor?: DecimalSource,
+    costFactor?: DecimalSource,
+  ) => PurchaseCost<Context, TickResult>;
 
   update: (now?: number, source?: string) => TickResult[];
   onUpdateComplete?: (
@@ -207,11 +215,21 @@ export function genResourceManager<Context, TickResult>(
     context,
     settings,
     resources: {},
+
     upsert: (props) => upsert(rm, props),
     get: (resource) => resolve(rm, resource),
+
+    canAfford: (cost) => canAfford(resolveAll(rm, cost)),
     purchase: (toBuy, style = "partial", gainFactor = 1, costFactor = 1) =>
       purchase(rm, toBuy, style, gainFactor, costFactor),
-    canAfford: (cost) => canAfford(resolveAll(rm, cost)),
+    purchaseAll: (
+      limitResources = [],
+      amount = 1,
+      style = "partial",
+      gainFactor = 1,
+      costFactor = 1,
+    ) => purchaseAll(rm, limitResources, amount, style, gainFactor, costFactor),
+
     update: (now, source) => update(rm, now ?? Date.now(), source ?? "unknown"),
     execution: {},
   };
@@ -586,6 +604,35 @@ function purchase<C, R>(
     }
   });
 
+  return {
+    count: costs.reduce((count, rc) => count.plus(rc.count), Decimal.dZero),
+    style,
+    gain: combineResources(costs.map((rcCost) => rcCost.gain).flat()),
+    cost: combineResources(costs.map((rcCost) => rcCost.cost).flat()),
+  };
+}
+
+function purchaseAll<C, R>(
+  rm: ResourceManager<C, R>,
+  limitResources: (Resource<C, R> | string)[],
+  amount: PurchaseAmount,
+  style: PurchaseStyle,
+  gainFactor: DecimalSource,
+  costFactor: DecimalSource,
+): PurchaseCost<C, R> {
+  let resources = Object.values(rm.resources).filter(
+    (res) => (res.unlocked ?? true) && !res.disabled,
+  );
+  if (limitResources && limitResources.length > 0) {
+    limitResources = limitResources.map((res) =>
+      typeof res === "string" ? res : res.name,
+    );
+    resources = resources.filter((res) => limitResources.includes(res.name));
+  }
+
+  const costs = resources.map((res) => {
+    return purchaseVariable(res, amount, style, gainFactor, costFactor);
+  });
   return {
     count: costs.reduce((count, rc) => count.plus(rc.count), Decimal.dZero),
     style,
