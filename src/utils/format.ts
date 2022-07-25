@@ -223,6 +223,12 @@ Format.resource = function <Context, TickResult>(
   options.tolerance ??=
     10 ** (-options.prec - (display === "percentage" ? 2 : 0));
 
+  const active: "active" | "locked" | "disabled" = !(res.unlocked ?? true)
+    ? "locked"
+    : res.disabled
+    ? "disabled"
+    : "active";
+
   let count = res.value ? res.value() : res.count;
   if (count) {
     count = options.round(count.div(options.tolerance)).mul(options.tolerance);
@@ -246,6 +252,8 @@ Format.resource = function <Context, TickResult>(
   options.singularName ??= res.singularName ?? res.pluralName;
   options.pluralName ??= res.pluralName ?? res.singularName;
   const name = Format(options.override?.name, options) || undefined;
+
+  const icon = res.icon;
 
   let max = undefined;
   if (res.maxCount) {
@@ -288,7 +296,7 @@ Format.resource = function <Context, TickResult>(
     rateSign = signs[Decimal.cmp_tolerance(rateValue, 0, options.tolerance)];
   }
 
-  return { name, value, valueSign, max, rate, rateSign, extras };
+  return { active, name, icon, value, valueSign, max, rate, rateSign, extras };
 };
 
 const signs: Record<-1 | 0 | 1, "negative" | "zero" | "positive"> = {

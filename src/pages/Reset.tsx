@@ -22,7 +22,7 @@ export default function Reset() {
           possible that the game version is out of date, or that the save data
           is corrupt.
         </div>
-        <hr className="separator" />
+        <hr className="dashed" />
         <div className="full">
           For your records, here is the current contents of the save state. Keep
           this somewhere before resetting the game:

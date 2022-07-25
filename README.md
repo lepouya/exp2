@@ -1,7 +1,7 @@
 # Todo plan
 
 - Keyboard shortcuts
-- Rearrange value displays
+- Hide buy all and multiple selectors at the beginning
 
 # Things to experiment with
 

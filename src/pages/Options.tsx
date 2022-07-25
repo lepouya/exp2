@@ -130,7 +130,7 @@ export default function Options() {
           </div>
         ))}
 
-        <hr className="separator" />
+        <hr className="dashed" />
         <div className="full">
           Current number format is: &nbsp;
           {formatWithNotation.all[settings.numberFormat ?? ""]?.name ??
@@ -174,7 +174,7 @@ export default function Options() {
           {Format.time(settings.lastUpdate, { epoch: settings.lastSaved })}
         </div>
 
-        <hr className="separator" />
+        <hr className="dashed" />
         <div className="half center">
           <input
             type="button"

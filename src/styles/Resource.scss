@@ -11,16 +11,6 @@
   align-items: flex-start;
   align-content: flex-start;
 
-  .zero {
-    color: Theme.color(neutral);
-  }
-  .positive {
-    color: Theme.color(positive);
-  }
-  .negative {
-    color: Theme.color(negative);
-  }
-
   > div {
     display: inline-flex;
     align-items: center;

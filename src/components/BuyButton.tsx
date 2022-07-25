@@ -126,9 +126,13 @@ export default function BuyButton({
       ? res.buy(amount, "dry-partial", gainFactor, costFactor, overrideCount)
       : res.sell(amount, "dry-full", 1, costFactor, overrideCount);
   const active = context.resourceManager.canAfford(tx.cost);
+  const hasGain = tx.gain.some(({ count }) => Decimal.neq(count, 0));
   const hasCost = tx.cost.some(({ count }) => Decimal.neq(count, 0));
-  const classNames = [className, "buy-button", active || "inactive"];
+  const classNames = [className, "buy-button", active ? null : "inactive"];
 
+  if (!hasGain) {
+    return null;
+  }
   return (
     <button
       onClick={(e) => doPurchase(active && enabled ? tx.count : 0, e)}
