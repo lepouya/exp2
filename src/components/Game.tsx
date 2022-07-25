@@ -62,11 +62,11 @@ export default function Game() {
     <HashRouter>
       <nav id="navbar">
         <div className="left">
-          <Link to="/">Main</Link>
+          <Link to="/" heading="Main" />
         </div>
         <div className="spacer"></div>
         <div className="right">
-          <Link to="/options">Settings</Link>
+          <Link to="/options" icon="settings" />
         </div>
       </nav>
       <NuxRoot />

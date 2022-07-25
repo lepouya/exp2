@@ -35,6 +35,11 @@
     @include Theme.background($neutral: 15%);
   }
 
+  .icon {
+    width: 1.5em;
+    height: 1.5em;
+  }
+
   a {
     display: flex;
     width: 100%;
