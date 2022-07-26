@@ -223,7 +223,7 @@ BuyButton.BuyAllButton = ({
   suffix = "",
   infix = "of",
   and = " & ",
-  all = "everything",
+  all = "all",
 
   className,
   style,

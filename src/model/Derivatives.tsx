@@ -8,11 +8,82 @@ import Format from "../utils/format";
 import { Context } from "./Context";
 import { Resource } from "./Resource";
 
-export function genDerivatives(context: Context, name = "x", d = 0) {
+export function genDerivatives(context: Context, name = "x", cnt = 0) {
+  const supers = ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
   const res = [];
-  for (let i = 0; i <= d; i++) {
-    res.push(genDerivativeResource(context, name, i));
+
+  for (let d = 0; d <= cnt; d++) {
+    const dSuper = Array.from(d <= 1 ? "" : d.toFixed()).reduce(
+      (c, n) => c + supers[parseInt(n)],
+      "",
+    );
+    res.push(
+      context.resourceManager.upsert({
+        name: `${name}_${d}`,
+        singularName: d ? `d${dSuper}/dt${dSuper} . ${name}` : name,
+
+        count: Decimal.dZero,
+        extra: { base: 0 },
+        value(this: Resource) {
+          return this.count;
+        },
+
+        unlocked: d === 0,
+        autoUnlock: true,
+        unlockCost() {
+          return [
+            { resource: `${name}_${0}`, count: Decimal.pow10(d - 0.3) },
+            { resource: `${name}_${d - 1}`, count: 1 },
+          ];
+        },
+
+        cost(n) {
+          if (!d) {
+            return [];
+          }
+          return [
+            {
+              resource: `${name}_${0}`,
+              count: Decimal.sub(n, 1)
+                .div(10)
+                .add(1)
+                .floor()
+                .mul(Math.floor(d ** 1.5) + 1)
+                .sub(1)
+                .floor()
+                .pow10(),
+            },
+          ];
+        },
+
+        onPurchase(this: Resource, purchase) {
+          if (purchase.style !== "free") {
+            this.extra.base =
+              (this.extra.base ?? 0) +
+              Decimal.fromValue(purchase.count).toNumber();
+            if (d > 0) {
+              this.extra.factor = Decimal.div(this.extra.base, 10)
+                .floor()
+                .pow_base(Decimal.dTwo)
+                .round()
+                .toNumber();
+            }
+          }
+        },
+
+        tick(this: Resource<Context>, dt) {
+          if (d > 0) {
+            this.manager
+              .get(`${name}_${d - 1}`)
+              .add(
+                this.count.multiply(this.extra.factor ?? 0).multiply(0.1 * dt),
+              );
+          }
+        },
+      }),
+    );
   }
+
   return res;
 }
 
@@ -41,87 +112,14 @@ export function RenderDerivatives(props: { name: string }) {
       {ress.map((res) => (
         <RenderDerivative key={res.name} resource={res} />
       ))}
-      <div className="full right">
-        Buy multiples: &nbsp;
-        <BuyButton.BuyAmountButtons />
-      </div>
+      {ress[0].count.gte(10) && (
+        <div className="full right">
+          Buy multiples: &nbsp;
+          <BuyButton.BuyAmountButtons />
+        </div>
+      )}
     </div>
   );
-}
-
-const superscripts = ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
-function toSuper(n: number) {
-  if (n === 1) {
-    return "";
-  }
-  return Array.from(n.toFixed())
-    .map((d) => superscripts[parseInt(d)])
-    .join("");
-}
-
-const oneTenth = Decimal.dTen.reciprocal();
-function genDerivativeResource(context: Context, name = "x", d = 0) {
-  return context.resourceManager.upsert({
-    name: `${name}_${d}`,
-    singularName: d ? `d${toSuper(d)} / d.${name}${toSuper(d)}` : name,
-
-    unlocked: d === 0,
-    autoUnlock: true,
-
-    count: Decimal.dZero,
-    value(this: Resource) {
-      return this.count;
-    },
-
-    cost(n) {
-      if (!d) {
-        return [];
-      }
-      const l = oneTenth.multiply(n).subtract(oneTenth).floor();
-      return [
-        {
-          resource: `${name}_${0}`,
-          count: l.plus(1).multiply(d).plus(l).pow10(),
-        },
-      ];
-    },
-
-    unlockCost() {
-      return [
-        { resource: `${name}_${0}`, count: Decimal.pow10(d - 0.5) },
-        { resource: `${name}_${d - 1}`, count: 1 },
-      ];
-    },
-
-    extra: {},
-    onPurchase(this: Resource, purchase) {
-      if (purchase.style !== "free") {
-        this.extra.manual =
-          (this.extra.manual ?? 0) +
-          Decimal.fromValue(purchase.count).toNumber();
-        if (d > 0) {
-          this.extra.speedMultiplier = oneTenth
-            .multiply(this.extra.manual)
-            .floor()
-            .pow_base(Decimal.dTwo)
-            .round()
-            .toNumber();
-        }
-      }
-    },
-
-    tick(this: Resource<Context>, dt) {
-      if (d > 0) {
-        this.manager
-          .get(`${name}_${d - 1}`)
-          .add(
-            this.count
-              .multiply(this.extra.speedMultiplier ?? 0)
-              .multiply(0.1 * dt),
-          );
-      }
-    },
-  });
 }
 
 function RenderDerivative(props: {
@@ -156,11 +154,14 @@ function RenderDerivative(props: {
           )}
         </div>
         <div className="quarter">
-          <BuyButton.BuyAllButton
-            resources={props.rest}
-            showNames={false}
-            overrideCount="manual"
-          />
+          {props.rest && props.rest[0] && props.rest[0].count.gt(10) && (
+            <BuyButton.BuyAllButton
+              resources={props.rest}
+              showNames={false}
+              overrideCount="base"
+              all={`all ${fmt.name} derivatives`}
+            />
+          )}
         </div>
         <hr className="underlined" />
       </>
@@ -173,17 +174,17 @@ function RenderDerivative(props: {
             {fmt.icon && <Icon icon={fmt.icon} size="1em" />}
             {fmt.name}
           </div>
-          {res.extra.speedMultiplier > 1 && (
+          {res.extra.factor > 1 && (
             <div className="zero three-quarters right">
-              {`x${fmt.extras["Speed Multiplier"]} speed`}
+              {`x${fmt.extras["Factor"]}`}
             </div>
           )}
         </div>
         <div className="quarter">
           <div className="full">{fmt.value}</div>
-          {res.extra.manual && (
+          {res.extra.base > 0 && (
             <div className="zero three-quarters right">
-              {`(${fmt.extras["Manual"]})`}
+              {`(${fmt.extras["Base"]})`}
             </div>
           )}
         </div>
@@ -193,7 +194,7 @@ function RenderDerivative(props: {
           )}
         </div>
         <div className="quarter">
-          <BuyButton resource={res} overrideCount="manual" />
+          <BuyButton resource={res} overrideCount="base" />
         </div>
         <hr className="dotted" />
       </>
