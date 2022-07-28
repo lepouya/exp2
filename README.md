@@ -2,7 +2,7 @@
 
 - Keyboard shortcuts
 - Tab objects that game component can parse and render
-- Reorg components and pages to have only game-specific controls in pages
+- Theme-like registry for number formats
 
 # Things to experiment with
 

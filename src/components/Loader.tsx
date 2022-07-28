@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
-import Reset from "../pages/Reset";
 import Game from "./Game";
 import useGameContext from "./GameContext";
+import Reset from "./Reset";
 import Spinner from "./Spinner";
 
 export default function Loader() {

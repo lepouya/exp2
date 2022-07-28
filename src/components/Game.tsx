@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
 
 import Main from "../pages/Main";
-import NuxRoot from "../pages/NuxRoot";
 import Options from "../pages/Options";
 import { setTheme } from "../utils/document";
 import useGameContext from "./GameContext";
 import Link from "./Link";
+import NuxRoot from "./NuxRoot";
 import toast from "./Toast";
 
 export default function Game() {

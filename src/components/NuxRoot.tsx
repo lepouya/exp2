@@ -124,6 +124,7 @@ export default function NuxRoot() {
 }
 
 function registerOfflineSummary(nm: NuxManager<Context>) {
+  const settings = nm.context.settings;
   const rm = nm.context.resourceManager;
   nm.register({
     name: "OfflineSummary",
@@ -141,9 +142,8 @@ function registerOfflineSummary(nm: NuxManager<Context>) {
         return null;
       } else if (keys.length === 0) {
         return <div className="full">Nothing happened!</div>;
-      } else if (keys.length > 12) {
-        remainder = keys.length - 11;
-        keys.splice(11);
+      } else if (keys.length > settings.offlineSummaryMaxUpdates) {
+        remainder = keys.splice(settings.offlineSummaryMaxUpdates - 1).length;
       }
       return (
         <>
@@ -160,6 +160,8 @@ function registerOfflineSummary(nm: NuxManager<Context>) {
             <div className="full" key={res}>
               <ResourceRender
                 resource={res}
+                showColors={true}
+                showPlusSign={true}
                 override={{ count: loadUpdate.lastChanges[res] }}
               />
             </div>
@@ -173,7 +175,11 @@ function registerOfflineSummary(nm: NuxManager<Context>) {
   });
 
   rm.onUpdateComplete = function (changes, dt, source) {
-    if (source === "load" && dt >= 0 && Object.keys(changes).length > 0) {
+    if (
+      source === "load" &&
+      dt >= settings.offlineSummaryMinSecs &&
+      Object.keys(changes).length > 0
+    ) {
       nm.currentStates.OfflineSummary = { priority: 0 };
     }
   };

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import useGameContext from "../components/GameContext";
+import useGameContext from "./GameContext";
 
 export default function Reset() {
   const context = useGameContext();
