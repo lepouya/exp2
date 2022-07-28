@@ -10,7 +10,10 @@ export default function registerOfflineSummary(context: Context) {
     body(_, manager) {
       const rm = manager.context.resourceManager;
       const loadUpdate = rm.execution.load;
-      const keys = Object.keys(loadUpdate?.lastChanges ?? {});
+      const keys = Object.keys(loadUpdate?.lastChanges ?? {}).sort(
+        (a, b) => rm.resources[a].priority - rm.resources[b].priority,
+      );
+
       let remainder = 0;
 
       if (!loadUpdate) {
@@ -50,7 +53,7 @@ export default function registerOfflineSummary(context: Context) {
 
   context.resourceManager.onUpdateComplete = function (changes, dt, source) {
     if (source === "load" && dt >= 60 && Object.keys(changes).length > 0) {
-      context.nuxManager.currentStates.OfflineSummary = { priority: 1000 };
+      context.nuxManager.currentStates.OfflineSummary = { priority: 0 };
     }
   };
 }

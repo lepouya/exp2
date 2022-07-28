@@ -116,8 +116,8 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
       return Object.keys(nm.currentStates)
         .sort(
           (a, b) =>
-            (nm.currentStates[b].priority ?? 0) -
-            (nm.currentStates[a].priority ?? 0),
+            (nm.currentStates[a].priority ?? Infinity) -
+            (nm.currentStates[b].priority ?? Infinity),
         )
         .reduce(function (showNux, curNux) {
           if (showNux) {

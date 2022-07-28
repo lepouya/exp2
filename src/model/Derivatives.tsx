@@ -21,6 +21,7 @@ export function genDerivatives(context: Context, name = "x", cnt = 0) {
       context.resourceManager.upsert({
         name: `${name}_${d}`,
         singularName: d ? `d${dSuper}/dt${dSuper} . ${name}` : name,
+        priority: d,
 
         count: Decimal.dZero,
         extra: { base: 0 },

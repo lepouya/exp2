@@ -13,6 +13,7 @@ export type Resource<Context = any, TickResult = any> = {
   readonly name: string;
   unlocked?: boolean;
   disabled?: boolean;
+  priority: number;
 
   icon?: string;
   display?: "none" | "number" | "time" | "percentage";
@@ -171,6 +172,7 @@ export function genResource<Context, TickResult>(
   const res: Resource<Context, TickResult> = {
     manager: rm,
     name,
+    priority: Infinity,
     count: Decimal.dZero,
     extra: {},
 
@@ -324,9 +326,9 @@ function update<C, R>(
     }
   });
 
-  const resources = Object.values(rm.resources).filter(
-    (res) => (res.unlocked ?? true) && !res.disabled,
-  );
+  const resources = Object.values(rm.resources)
+    .filter((res) => (res.unlocked ?? true) && !res.disabled)
+    .sort((a, b) => a.priority - b.priority);
 
   resources.forEach((res) => {
     cache[res.name] = res.count;
