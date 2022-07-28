@@ -2,7 +2,6 @@
 
 - Keyboard shortcuts
 - Tab objects that game component can parse and render
-- Resource priorities for offline summary
 - Reorg components and pages to have only game-specific controls in pages
 
 # Things to experiment with

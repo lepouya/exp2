@@ -1,12 +1,18 @@
 import { MouseEvent, useEffect } from "react";
 
 import useGameContext from "../components/GameContext";
-import { Nux } from "../model/Nux";
+import ResourceRender from "../components/ResourceRender";
+import { Context } from "../model/Context";
+import { Nux, NuxManager } from "../model/Nux";
+import Format from "../utils/format";
 import Fn from "../utils/function";
 import { Nullable, Optional } from "../utils/types";
 
 export default function NuxRoot() {
   const { nuxManager } = useGameContext();
+  if (!nuxManager.nuxes["OfflineSummary"]) {
+    registerOfflineSummary(nuxManager);
+  }
   const nux = nuxManager.genCurrentNux();
 
   useEffect(() => {
@@ -114,5 +120,65 @@ export default function NuxRoot() {
     return <div className="greyout">{nuxRoot}</div>;
   } else {
     return nuxRoot;
+  }
+}
+
+function registerOfflineSummary(nm: NuxManager<Context>) {
+  const rm = nm.context.resourceManager;
+  nm.register({
+    name: "OfflineSummary",
+    title: "While you were offline...",
+    bounds: { height: "32em" },
+    body() {
+      const loadUpdate = rm.execution.load;
+      const keys = Object.keys(loadUpdate?.lastChanges ?? {}).sort(
+        (a, b) => rm.resources[a].priority - rm.resources[b].priority,
+      );
+
+      let remainder = 0;
+
+      if (!loadUpdate) {
+        return null;
+      } else if (keys.length === 0) {
+        return <div className="full">Nothing happened!</div>;
+      } else if (keys.length > 12) {
+        remainder = keys.length - 11;
+        keys.splice(11);
+      }
+      return (
+        <>
+          <div className="full">
+            You were offline for{" "}
+            {Format.time(loadUpdate.lastDelta * 1000, {
+              now: "",
+              ago: "",
+              never: "",
+            })}
+            . During this time, you gained:
+          </div>
+          {keys.map((res) => (
+            <div className="full" key={res}>
+              <ResourceRender
+                resource={res}
+                override={{ count: loadUpdate.lastChanges[res] }}
+              />
+            </div>
+          ))}
+          {remainder > 0 && (
+            <div className="full center">... and {remainder} more ...</div>
+          )}
+        </>
+      );
+    },
+  });
+
+  rm.onUpdateComplete = function (changes, dt, source) {
+    if (source === "load" && dt >= 0 && Object.keys(changes).length > 0) {
+      nm.currentStates.OfflineSummary = { priority: 0 };
+    }
+  };
+  const load = rm.execution.load;
+  if (load && load.lastTick > 0) {
+    rm.onUpdateComplete(load.lastChanges, load.lastDelta, "load");
   }
 }

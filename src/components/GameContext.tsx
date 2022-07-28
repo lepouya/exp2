@@ -2,7 +2,6 @@ import { createContext, PropsWithChildren, useContext } from "react";
 
 import { emptyContext, wrapContext } from "../model/Context";
 import { genDerivatives } from "../model/Derivatives";
-import registerOfflineSummary from "./OfflineSummary";
 
 const context = emptyContext<boolean>();
 const GameReactContext = createContext(context);
@@ -22,6 +21,5 @@ export default function useGameContext() {
 Object.assign(context, {
   init: function (this: typeof context) {
     genDerivatives(this, "x", 10);
-    registerOfflineSummary(this);
   },
 });

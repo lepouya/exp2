@@ -100,10 +100,10 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
           highlightSelector: "",
           greyOut: false,
           bounds: {
-            left: "50% - 200px",
+            left: "50% - 14rem",
             top: "6rem",
-            width: "400px",
-            height: "450px",
+            width: "28rem",
+            height: "28rem",
           },
         },
         nm,
