@@ -2,67 +2,68 @@ import Decimal from "break_eternity.js";
 
 import clamp from "./clamp";
 
-export default function tickTimer(
-  res: {
-    count?: Decimal;
-    extra?: Record<string, number>;
-  },
-  {
-    kind = "",
-    tickSource = "",
+export default function tickTimer({
+  kind = "",
+  tickSource = "",
 
-    minValue = 0.0,
-    maxValue = +Infinity,
-    direction = 1.0,
+  minValue = 0.0,
+  maxValue = +Infinity,
+  direction = 1.0,
 
-    streakKind = "current",
-    maxStreakKind = "max",
-    minStreakKind = "min",
-    resetStreakSource = "",
-  } = {},
-) {
-  return (dt: number, src?: string) => {
+  streakKind = "current",
+  maxStreakKind = "max",
+  minStreakKind = "min",
+  resetStreakSource = "",
+} = {}) {
+  return function (
+    this: {
+      count?: Decimal;
+      extra?: Record<string, number>;
+    },
+    dt: number,
+    src?: string,
+  ) {
     if (!tickSource || src === tickSource) {
       let cur =
-        (kind && res.extra ? res.extra[kind] : res.count?.toNumber()) ?? 0;
+        (kind && this.extra ? this.extra[kind] : this.count?.toNumber()) ?? 0;
       if (
         (cur > minValue || direction > 0) &&
         (cur < maxValue || direction < 0)
       ) {
         cur = clamp(cur + direction * dt, minValue, maxValue);
-        if (kind && res.extra) {
-          res.extra[kind] = cur;
+        if (kind && this.extra) {
+          this.extra[kind] = cur;
         } else {
-          res.count = Decimal.fromNumber(cur);
+          this.count = Decimal.fromNumber(cur);
         }
 
-        if (streakKind && res.extra && res.extra[streakKind] != null) {
-          res.extra[streakKind] = clamp(
-            res.extra[streakKind] + direction * dt,
+        if (streakKind && this.extra && this.extra[streakKind] != null) {
+          this.extra[streakKind] = clamp(
+            this.extra[streakKind] + direction * dt,
             minValue,
             maxValue,
           );
 
           if (
             maxStreakKind &&
-            res.extra[maxStreakKind] != null &&
-            res.extra[maxStreakKind] < res.extra[streakKind]
+            this.extra[maxStreakKind] != null &&
+            this.extra[maxStreakKind] < this.extra[streakKind]
           ) {
-            res.extra[maxStreakKind] = res.extra[streakKind];
+            this.extra[maxStreakKind] = this.extra[streakKind];
           }
 
           if (
             minStreakKind &&
-            res.extra[minStreakKind] != null &&
-            res.extra[minStreakKind] > res.extra[streakKind]
+            this.extra[minStreakKind] != null &&
+            this.extra[minStreakKind] > this.extra[streakKind]
           ) {
-            res.extra[minStreakKind] = res.extra[streakKind];
+            this.extra[minStreakKind] = this.extra[streakKind];
           }
         }
       }
     } else if (!resetStreakSource || src === resetStreakSource) {
-      if (streakKind && res.extra) {
-        res.extra[streakKind] =
+      if (streakKind && this.extra) {
+        this.extra[streakKind] =
           direction > 0 ? minValue : direction < 0 ? maxValue : 0;
       }
     }

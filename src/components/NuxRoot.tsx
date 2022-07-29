@@ -131,9 +131,9 @@ function registerOfflineSummary(context: Context) {
     bounds: { height: "32em" },
     body() {
       const loadUpdate = rm.execution.load;
-      const keys = Object.keys(loadUpdate?.lastChanges ?? {}).sort(
-        (a, b) => rm.resources[a].priority - rm.resources[b].priority,
-      );
+      const keys = Object.keys(loadUpdate?.lastChanges ?? {})
+        .filter((r) => isFinite(rm.resources[r].priority))
+        .sort((a, b) => rm.resources[a].priority - rm.resources[b].priority);
 
       let remainder = 0;
 
@@ -176,7 +176,7 @@ function registerOfflineSummary(context: Context) {
   rm.onUpdateComplete = function (changes, dt, source) {
     if (
       source === "load" &&
-      dt >= 0 * settings.offlineSummaryMinSecs &&
+      dt >= settings.offlineSummaryMinSecs &&
       Object.keys(changes).length > 0
     ) {
       nm.currentStates.OfflineSummary = { priority: 0 };

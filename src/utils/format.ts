@@ -76,14 +76,14 @@ Format.time = function (time: number, options?: TimeOptions): string {
   const ago = options?.ago ?? len === "long" ? "ago" : "";
 
   if (
-    never != undefined &&
+    never &&
     (time < 0 ||
       (options?.epoch != undefined &&
         (options.epoch <= 0 || time - options.epoch < 0)))
   ) {
     return never;
   } else if (
-    now != undefined &&
+    now &&
     (time === 0 || (options?.epoch != undefined && time === options.epoch))
   ) {
     return now;
@@ -153,7 +153,7 @@ Format.time = function (time: number, options?: TimeOptions): string {
     parts = [parts.join(sep), pop];
   }
 
-  let r = parts.join(lastSep) + (ago != undefined ? " " + ago : "");
+  let r = parts.join(lastSep) + (ago ? " " + ago : "");
   if (
     r &&
     options?.alwaysShowSign &&
@@ -215,6 +215,9 @@ Format.resource = function <Context, TickResult>(
   res = options.override ? { ...res, ...options.override } : res;
   let display = res.display ?? "number";
   options.len ??= "long";
+  options.now ??= "";
+  options.never ??= "";
+  options.ago ??= "";
   options.prec ??= display === "time" ? 3 : display === "number" ? 2 : 1;
   options.smallPrec ??= display === "number" ? 0 : options.prec;
   options.round ??= display === "number" ? Decimal.floor : Decimal.round;
@@ -229,7 +232,10 @@ Format.resource = function <Context, TickResult>(
     ? "disabled"
     : "active";
 
-  let count = res.value ? res.value() : res.count;
+  let count =
+    (options.override?.value
+      ? options.override.value()
+      : options.override?.count) ?? (res.value ? res.value() : res.count);
   if (count) {
     count = options.round(count.div(options.tolerance)).mul(options.tolerance);
   }

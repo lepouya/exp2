@@ -1,5 +1,6 @@
 import Decimal, { DecimalSource } from "break_eternity.js";
 
+import { timers } from "../data/timers";
 import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
 import Obj from "../utils/objects";
@@ -239,6 +240,7 @@ export function genResourceManager<Context, TickResult>(
     execution: {},
   };
 
+  timers.forEach((res) => upsert(rm, res));
   return setSaveProperties(rm, ["resources"]);
 }
 
