@@ -4,9 +4,9 @@ import { useMemo } from "react";
 import BuyButton from "../components/BuyButton";
 import useGameContext from "../components/GameContext";
 import Icon from "../components/Icon";
+import { Context, ContextInitializers } from "../model/Context";
+import { Resource } from "../model/Resource";
 import Format from "../utils/format";
-import { Context, ContextInitializers } from "./Context";
-import { Resource } from "./Resource";
 
 ContextInitializers.push((context) => genDerivatives(context, "x", 10));
 export function genDerivatives(context: Context, name = "x", cnt = 0) {

@@ -1,14 +1,14 @@
 import { ChangeEvent, MouseEvent, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
-import useGameContext from "../components/GameContext";
-import toast from "../components/Toast";
 import { themes } from "../data/themes";
 import { setTheme } from "../utils/document";
 import { loadFromFile, saveToFile } from "../utils/fileStorage";
 import Format from "../utils/format";
 import formatWithNotation from "../utils/notation";
 import Obj from "../utils/objects";
+import useGameContext from "./GameContext";
+import toast from "./Toast";
 
 export default function Options() {
   const context = useGameContext();

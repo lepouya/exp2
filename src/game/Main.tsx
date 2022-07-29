@@ -1,4 +1,4 @@
-import { RenderDerivatives } from "../model/Derivatives";
+import { RenderDerivatives } from "./Derivatives";
 
 export default function Main() {
   return (
