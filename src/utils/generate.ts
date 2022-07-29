@@ -1,12 +1,17 @@
 import Obj from "./objects";
-import { FunctionType, Optional } from "./types";
+import { FunctionType, Optional, TypeEquals } from "./types";
 
 export type Generator<T, Self = T, GenArgs extends unknown[] = []> =
   | (NonNullable<T> extends FunctionType ? never : Optional<T>)
   | ((self: Self, ...args: GenArgs) => Optional<T>);
 
 export type Generative<T, GenArgs extends unknown[] = []> = {
-  [Key in keyof T]?: Generator<T[Key], Optional<T>, GenArgs>;
+  [K in keyof T]?: TypeEquals<
+    { [Q in K]: T[K] },
+    { -readonly [Q in K]: T[K] },
+    Generator<T[K], Optional<T>, GenArgs>,
+    T[K]
+  >;
 };
 
 export default function generate<

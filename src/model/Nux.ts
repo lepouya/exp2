@@ -52,11 +52,10 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
 
     register(...nuxes) {
       nuxes.forEach((nux) => {
-        const res = generate(nux, { name: "", step: 0 }, nm);
-        if (!nm.nuxes[res.name ?? ""]) {
-          nm.nuxes[res.name ?? ""] = {};
+        if (!nm.nuxes[nux.name ?? ""]) {
+          nm.nuxes[nux.name ?? ""] = {};
         }
-        Obj.assign(nm.nuxes[res.name ?? ""], res.step ?? 0, nux);
+        Obj.assign(nm.nuxes[nux.name ?? ""], nux.step ?? 0, nux);
       });
     },
 

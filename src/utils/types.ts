@@ -75,3 +75,9 @@ type ReplaceArray<T, From, To> = T extends [infer Head]
   : T extends [infer Head, ...infer Rest]
   ? [Replace<Head, From, To>, ...ReplaceArray<Rest, From, To>]
   : never;
+
+export type TypeEquals<One, Two, Then = One, Else = never> = (<
+  T,
+>() => T extends One ? 1 : 2) extends <T>() => T extends Two ? 1 : 2
+  ? Then
+  : Else;

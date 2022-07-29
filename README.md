@@ -1,7 +1,6 @@
 # Todo plan
 
 - Keyboard shortcuts
-- Tab objects that game component can parse and render
 - Theme-like registry for number formats
 
 # Things to experiment with

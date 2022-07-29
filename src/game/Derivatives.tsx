@@ -2,14 +2,29 @@ import Decimal from "break_eternity.js";
 import { useMemo } from "react";
 
 import BuyButton from "../components/BuyButton";
+import Game from "../components/Game";
 import useGameContext from "../components/GameContext";
 import Icon from "../components/Icon";
-import { Context, ContextInitializers } from "../model/Context";
+import { Context } from "../model/Context";
 import { Resource } from "../model/Resource";
 import Format from "../utils/format";
 
-ContextInitializers.push((context) => genDerivatives(context, "x", 10));
-export function genDerivatives(context: Context, name = "x", cnt = 0) {
+export default function initDerivatives(context: Context) {
+  genDerivatives(context, "x", 10);
+  Game.registerTab({
+    path: "/",
+    placement: "left",
+    order: 1,
+    heading: "x",
+    body: () => (
+      <div id="x">
+        <RenderDerivatives name="x" />
+      </div>
+    ),
+  });
+}
+
+function genDerivatives(context: Context, name = "x", cnt = 0) {
   const supers = ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
   const res = [];
 
@@ -89,7 +104,7 @@ export function genDerivatives(context: Context, name = "x", cnt = 0) {
   return res;
 }
 
-export function RenderDerivatives(props: { name: string }) {
+function RenderDerivatives(props: { name: string }) {
   const { resources } = useGameContext();
   const [main, ress] = useMemo(() => {
     const prefix = `${props.name}_`;

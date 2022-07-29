@@ -2,6 +2,8 @@ import { createRoot } from "react-dom/client";
 
 import { GameContextProvider } from "./components/GameContext";
 import Loader from "./components/Loader";
+import initDerivatives from "./game/Derivatives";
+import { ContextInitializers } from "./model/Context";
 import { getHTMLElement } from "./utils/document";
 
 window.addEventListener(
@@ -14,3 +16,5 @@ window.addEventListener(
     ),
   false,
 );
+
+ContextInitializers.push(initDerivatives);
