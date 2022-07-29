@@ -2,17 +2,14 @@ import { MouseEvent, useEffect } from "react";
 
 import useGameContext from "../components/GameContext";
 import ResourceRender from "../components/ResourceRender";
-import { Context } from "../model/Context";
-import { Nux, NuxManager } from "../model/Nux";
+import { Context, ContextInitializers } from "../model/Context";
+import { Nux } from "../model/Nux";
 import Format from "../utils/format";
 import Fn from "../utils/function";
 import { Nullable, Optional } from "../utils/types";
 
 export default function NuxRoot() {
   const { nuxManager } = useGameContext();
-  if (!nuxManager.nuxes["OfflineSummary"]) {
-    registerOfflineSummary(nuxManager);
-  }
   const nux = nuxManager.genCurrentNux();
 
   useEffect(() => {
@@ -123,9 +120,11 @@ export default function NuxRoot() {
   }
 }
 
-function registerOfflineSummary(nm: NuxManager<Context>) {
-  const settings = nm.context.settings;
-  const rm = nm.context.resourceManager;
+function registerOfflineSummary(context: Context) {
+  const settings = context.settings;
+  const rm = context.resourceManager;
+  const nm = context.nuxManager;
+
   nm.register({
     name: "OfflineSummary",
     title: "While you were offline...",
@@ -177,14 +176,12 @@ function registerOfflineSummary(nm: NuxManager<Context>) {
   rm.onUpdateComplete = function (changes, dt, source) {
     if (
       source === "load" &&
-      dt >= settings.offlineSummaryMinSecs &&
+      dt >= 0 * settings.offlineSummaryMinSecs &&
       Object.keys(changes).length > 0
     ) {
       nm.currentStates.OfflineSummary = { priority: 0 };
     }
   };
-  const load = rm.execution.load;
-  if (load && load.lastTick > 0) {
-    rm.onUpdateComplete(load.lastChanges, load.lastDelta, "load");
-  }
 }
+
+ContextInitializers.push(registerOfflineSummary);

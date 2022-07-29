@@ -13,6 +13,8 @@ export type Context<TickResult = any> = {
   init: (this: Context<TickResult>) => void;
 };
 
+export const ContextInitializers: ((context: Context) => void)[] = [];
+
 export function emptyContext<TickResult>(
   oldContext?: Partial<Context<TickResult>>,
 ): Context<TickResult> {
@@ -30,6 +32,8 @@ export function emptyContext<TickResult>(
   context.nuxManager.currentStates = {};
 
   context.init();
+  ContextInitializers.forEach((init) => init(context));
+
   return Store.setSaveProperties(context, [
     "settings",
     "resourceManager",
@@ -68,6 +72,7 @@ function _load<TickResult>(
 
   if (loaded) {
     context.init();
+    ContextInitializers.forEach((init) => init(context));
 
     Obj.copy(newContext.settings, context.settings);
     context.settings.lastLoaded = Date.now();

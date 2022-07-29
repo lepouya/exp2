@@ -3,6 +3,7 @@
 - Keyboard shortcuts
 - Tab objects that game component can parse and render
 - Theme-like registry for number formats
+- Online and offline time as default resources
 
 # Things to experiment with
 
