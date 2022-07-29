@@ -1,4 +1,5 @@
 import tablerIcons from "../../assets/sprites/tabler-sprite-nostroke.svg";
+import { ContextInitializers } from "../model/Context";
 import Arr from "../utils/arrays";
 import { getHTMLElement } from "../utils/document";
 
@@ -34,8 +35,6 @@ export default function Icon(props: IconProps) {
   );
 }
 
-window.addEventListener(
-  "load",
+ContextInitializers.push(
   () => (getHTMLElement("icon").innerHTML = tablerIcons),
-  false,
 );
