@@ -1,8 +1,5 @@
 # Todo plan
 
-- Theme-like registry for number formats
-- buy all shortcut
-
 # Things to experiment with
 
 - Matrix fonts
@@ -16,3 +13,4 @@
 - Document utils and models
 - Better unit test coverage
 - Rename Nux to Popup
+- Theme-like registry for number formats

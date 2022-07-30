@@ -22,6 +22,10 @@ export default function initDerivatives(context: Context) {
       </div>
     ),
   });
+  Game.registerShortcut("x", () => {
+    buyAllDerivatives(context, "x");
+    return true;
+  });
 }
 
 function genDerivatives(context: Context, name = "x", cnt = 0) {
@@ -176,7 +180,7 @@ function RenderDerivative(props: {
               resources={props.rest}
               showNames={false}
               overrideCount="base"
-              all={`all ${fmt.name} derivatives`}
+              all={`all ${fmt.name}'s`}
             />
           )}
         </div>
@@ -217,4 +221,15 @@ function RenderDerivative(props: {
       </>
     );
   }
+}
+
+function buyAllDerivatives(context: Context, name: string) {
+  context.resourceManager.purchaseAll(
+    Object.fromEntries(
+      Object.values(context.resourceManager.resources)
+        .filter((r) => r.name.startsWith(name + "_") && r.name !== name + "_0")
+        .map((r) => [r.name, "base"]),
+    ),
+    1000,
+  );
 }
