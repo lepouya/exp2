@@ -1,7 +1,7 @@
 # Todo plan
 
-- Keyboard shortcuts
 - Theme-like registry for number formats
+- buy all shortcut
 
 # Things to experiment with
 

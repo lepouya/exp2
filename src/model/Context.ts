@@ -2,7 +2,7 @@ import * as LocalStore from "../utils/localStorage";
 import Obj from "../utils/objects";
 import * as Store from "../utils/store";
 import { genNuxManager, NuxManager } from "./Nux";
-import { genResourceManager, Resource, ResourceManager } from "./Resource";
+import { genResourceManager, ResourceManager } from "./Resource";
 import { defaultSettings, Settings } from "./Settings";
 
 export type Context<TickResult = any> = {
@@ -11,6 +11,11 @@ export type Context<TickResult = any> = {
   nuxManager: NuxManager<Context<TickResult>>;
 
   init: (this: Context<TickResult>) => void;
+  load: () => boolean;
+  loadAs: (loadStr: string) => boolean;
+  save: (pretty?: boolean) => void;
+  saveAs: (pretty?: boolean) => string;
+  reset: () => void;
 };
 
 export const ContextInitializers: ((context: Context) => void)[] = [];
@@ -21,6 +26,13 @@ export function emptyContext<TickResult>(
   const context = (oldContext || {}) as Context<TickResult>;
 
   context.init ??= () => {};
+  context.load = () => _load(context, LocalStore.loadFromBrowser(_store));
+  context.loadAs = (loadStr: string) => _load(context, loadStr);
+  context.save = (pretty?: boolean) =>
+    LocalStore.saveToBrowser(_store, _save(context, pretty));
+  context.saveAs = (pretty?: boolean) => _save(context, pretty);
+  context.reset = () => _reset(context);
+
   context.settings = {
     ...defaultSettings,
     lastReset: Date.now(),
@@ -42,23 +54,7 @@ export function emptyContext<TickResult>(
 }
 
 export function wrapContext<TickResult>(context: Context<TickResult>) {
-  return {
-    ...context.resourceManager,
-    ...context,
-    context,
-
-    resource: (res: string | Resource<Context<TickResult>, TickResult>) =>
-      context.resourceManager.get(res),
-
-    load: () => _load(context, LocalStore.loadFromBrowser(_store)),
-    loadAs: (loadStr: string) => _load(context, loadStr),
-
-    save: (pretty?: boolean) =>
-      LocalStore.saveToBrowser(_store, _save(context, pretty)),
-    saveAs: (pretty?: boolean) => _save(context, pretty),
-
-    reset: () => _reset(context),
-  };
+  return { ...context.resourceManager, ...context, context };
 }
 
 const _store = globalThis.gamePackage.name;

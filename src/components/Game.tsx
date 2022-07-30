@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   HashRouter,
   NavLink,
@@ -21,25 +21,33 @@ export default function Game() {
   const [timerId, setTimerId] = useState<NodeJS.Timer | undefined>();
   const [_, setLastRendered] = useState(0);
 
-  useEffect(
-    function () {
-      if (timerId) {
-        clearInterval(timerId);
-      }
-      setTimerId(setInterval(tick, 1000.0 / settings.ticksPerSecond));
-      setTheme(settings.theme);
+  const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (
+      event.target &&
+      BLOCKED_DOM_ELEMS.includes(
+        (event.target as HTMLElement).tagName.toUpperCase(),
+      )
+    ) {
+      return;
+    }
 
-      return () => {
-        if (timerId) {
-          clearInterval(timerId);
-          setTimerId(undefined);
+    const callbacks = shortcuts[event.key.toLowerCase()];
+    if (callbacks && callbacks.length > 0) {
+      callbacks.forEach((cb) => {
+        if (cb(context, event)) {
+          event.preventDefault();
+          event.stopPropagation();
         }
-      };
-    },
-    [settings, settings.ticksPerSecond, settings.theme],
-  );
+      });
+    }
+  }, []);
 
-  function tick() {
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
+  }, [handleKeyPress]);
+
+  const tick = useCallback(() => {
     // Update resources
     const updated = context.resourceManager.update(undefined, "tick");
     if (updated.includes(true)) {
@@ -63,10 +71,28 @@ export default function Game() {
         ? settings.lastUpdate
         : lastRendered,
     );
-  }
+  }, [context, settings, save, setLastRendered]);
 
-  const left = GameTabs.left.map((tab) => generate(tab, {}, context));
-  const right = GameTabs.right.map((tab) => generate(tab, {}, context));
+  useEffect(
+    function () {
+      if (timerId) {
+        clearInterval(timerId);
+      }
+      setTimerId(setInterval(tick, 1000.0 / settings.ticksPerSecond));
+      setTheme(settings.theme);
+
+      return () => {
+        if (timerId) {
+          clearInterval(timerId);
+          setTimerId(undefined);
+        }
+      };
+    },
+    [settings, settings.ticksPerSecond, settings.theme],
+  );
+
+  const left = tabs.left.map((tab) => generate(tab, {}, context));
+  const right = tabs.right.map((tab) => generate(tab, {}, context));
   return (
     <HashRouter>
       <nav id="navbar">
@@ -104,7 +130,7 @@ export type GameTab = {
   body: string | JSX.Element;
 };
 
-const GameTabs: Record<"left" | "right", Generative<GameTab, [Context]>[]> = {
+const tabs: Record<"left" | "right", Generative<GameTab, [Context]>[]> = {
   left: [],
   right: [
     {
@@ -120,12 +146,41 @@ const GameTabs: Record<"left" | "right", Generative<GameTab, [Context]>[]> = {
 
 Game.registerTab = (tab: Generative<GameTab, [Context]>) => {
   const placement = tab.placement ?? "left";
-  GameTabs[placement].push(tab);
-  GameTabs[placement].sort(
+
+  const removeIdx = tabs[placement].findIndex((t) => t.path === tab.path);
+  if (removeIdx >= 0) {
+    tabs[placement].splice(removeIdx, 1);
+  }
+
+  tabs[placement].push(tab);
+  tabs[placement].sort(
     (tab1, tab2) =>
       (placement === "left" ? 1 : -1) * (tab1.order ?? Infinity) -
       (tab2.order ?? Infinity),
   );
+};
+
+const BLOCKED_DOM_ELEMS = ["TEXTAREA", "INPUT"];
+type ShortcutCallback = (context: Context, event: KeyboardEvent) => boolean;
+const shortcuts: Record<string, ShortcutCallback[]> = {
+  s: [
+    function (ctx, ev) {
+      if (ev.ctrlKey || ev.metaKey) {
+        ctx.save();
+        toast.success("Game saved!");
+        return true;
+      }
+      return false;
+    },
+  ],
+};
+
+Game.registerShortcut = (key: string, callback: ShortcutCallback) => {
+  key = key.toLowerCase().replace(/\W/g, "");
+  shortcuts[key] ??= [];
+  if (!shortcuts[key].includes(callback)) {
+    shortcuts[key].push(callback);
+  }
 };
 
 function TabLink({ tab }: { tab: GameTab }) {
