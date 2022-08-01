@@ -3,6 +3,7 @@ import "mocha";
 import Decimal, { DecimalSource } from "break_eternity.js";
 import { expect } from "chai";
 
+import { timers } from "../src/data/timers";
 import { genResourceManager } from "../src/model/Resource";
 
 const D = Decimal.fromValue;
@@ -11,7 +12,11 @@ const N = (n?: DecimalSource) => (n ? D(n).toNumber() : undefined);
 describe("Creating resources", () => {
   it("Empty resource manager set up correctly", () => {
     const rm = genResourceManager(null, {});
-    expect(rm.resources).to.deep.equal({});
+    const timerKeys = timers.map((r) => r.name);
+    const keys = Object.keys(rm.resources).filter(
+      (k) => !timerKeys.includes(k),
+    );
+    expect(keys).to.deep.equal([]);
   });
 
   it("Creating new resource works", () => {
