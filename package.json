@@ -1,6 +1,6 @@
 {
   "name": "exp2",
-  "version": "0.0.0-exp",
+  "version": "0.0.0",
   "description": "My Experiments",
   "author": "Pouya Larjani <pouya.larjani@gmail.com> (https://github.com/lepouya)",
   "main": "src/index.pug",

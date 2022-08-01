@@ -224,12 +224,15 @@ function RenderDerivative(props: {
 }
 
 function buyAllDerivatives(context: Context, name: string) {
-  context.resourceManager.purchaseAll(
-    Object.fromEntries(
-      Object.values(context.resourceManager.resources)
-        .filter((r) => r.name.startsWith(name + "_") && r.name !== name + "_0")
-        .map((r) => [r.name, "base"]),
-    ),
-    1000,
+  const ress = Object.fromEntries(
+    Object.values(context.resourceManager.resources)
+      .filter((r) => r.name.startsWith(name + "_") && r.name !== name + "_0")
+      .map((r) => [r.name, "base"]),
   );
+  context.resourceManager.purchaseAll(ress, {
+    minAmount: 1,
+    maxAmount: 1000,
+    increments: 10,
+  });
+  context.resourceManager.purchaseAll(ress, 1000);
 }
