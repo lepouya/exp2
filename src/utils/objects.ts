@@ -55,3 +55,21 @@ Obj.map = function <
 
   return newObject;
 };
+
+Obj.filter = function <Key extends string | number | symbol, Value>(
+  obj: Record<Key, Value>,
+  valueFilter?: (value?: Value, key?: Key) => boolean,
+  keyFilter?: (key?: Key) => boolean,
+): Record<Key, Value> {
+  const newObject: any = {};
+
+  for (const key in obj) {
+    const keyPass = keyFilter ? keyFilter(key) : true;
+    const valuePass = valueFilter ? valueFilter(obj[key], key) : true;
+    if (keyPass && valuePass) {
+      newObject[key] = obj[key];
+    }
+  }
+
+  return newObject;
+};

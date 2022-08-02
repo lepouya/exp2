@@ -5,7 +5,7 @@ import ResourceRender from "../components/ResourceRender";
 import { Context, ContextInitializers } from "../model/Context";
 import { Nux } from "../model/Nux";
 import Format from "../utils/format";
-import Fn from "../utils/function";
+import Fn from "../utils/functions";
 import { Nullable, Optional } from "../utils/types";
 
 export default function NuxRoot() {
