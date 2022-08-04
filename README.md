@@ -7,6 +7,7 @@
 
 - Matrix fonts
 - Screen glitching
+- Blurry text
 - Prestige
 
 # Long term ideals
