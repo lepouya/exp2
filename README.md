@@ -2,6 +2,7 @@
 
 - Turn nux states into a resource
 - Theme-like registry for number formats
+- There's an issue with route path registration on reset
 
 # Things to experiment with
 
