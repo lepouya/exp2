@@ -66,23 +66,22 @@ function _load<TickResult>(
   const newContext = { ...context };
   const loaded = !!loadStr && Store.loadAs(newContext, loadStr);
 
+  context.init();
+  ContextInitializers.forEach((init) => init(context));
+
   if (loaded) {
-    context.init();
-    ContextInitializers.forEach((init) => init(context));
-
     Obj.copy(newContext.settings, context.settings);
-    context.settings.lastLoaded = Date.now();
-
     Obj.copy(
       newContext.nuxManager.currentStates,
       context.nuxManager.currentStates,
     );
-
     Object.values(newContext.resourceManager.resources || {}).forEach((res) =>
       context.resourceManager.upsert(res),
     );
-    context.resourceManager.update(undefined, "load");
   }
+
+  context.settings.lastLoaded = Date.now();
+  context.resourceManager.update(undefined, "load");
 
   return loaded;
 }
