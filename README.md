@@ -5,6 +5,7 @@
 
 # Things to experiment with
 
+- Grids of 3/4/6 sided polygons
 - Matrix fonts
 - Screen glitching
 - Blurry text

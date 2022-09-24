@@ -72,7 +72,12 @@ function _toObject<T>(value: T): any {
 }
 
 function _fromObject<T>(value: T, loadObj: any): boolean {
-  if (!loadObj || typeof loadObj !== "object" || typeof value !== "object") {
+  if (
+    value == null ||
+    loadObj == null ||
+    typeof loadObj !== "object" ||
+    typeof value !== "object"
+  ) {
     return false;
   }
 
@@ -129,8 +134,11 @@ export function loadAs<T>(value: T, loadStr: string): boolean {
 }
 
 export function setSaveProperties<T>(value: T, props: (keyof T)[]): T {
-  const saveProperties = _save_properties(value);
-  saveProperties.push(...props);
-  Object.assign(value, { _save_properties: Arr.dedupe(saveProperties) });
+  if (value != null) {
+    const saveProperties = _save_properties(value);
+    saveProperties.push(...props);
+    Object.assign(value, { _save_properties: Arr.dedupe(saveProperties) });
+  }
+
   return value;
 }
