@@ -194,6 +194,7 @@ function TabLink({ tab }: { tab: GameTab }) {
       <NavLink
         className={(p) => (p.isActive ? "active" : undefined)}
         to={{ pathname: tab.path, search: location.search }}
+        end
       >
         {typeof tab.icon === "string" ? <Icon icon={tab.icon} /> : tab.icon}
         {tab.heading && <span>{tab.heading}</span>}

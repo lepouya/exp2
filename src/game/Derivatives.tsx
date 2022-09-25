@@ -15,7 +15,7 @@ export default function initDerivatives(context: Context) {
     path: "/",
     placement: "left",
     order: 1,
-    heading: "x",
+    heading: "Derivatives",
     body: () => (
       <div id="x">
         <RenderDerivatives name="x" />
