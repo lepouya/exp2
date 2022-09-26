@@ -58,14 +58,18 @@ function genSVGSymbols(pack: keyof typeof PACKS) {
   let contents = inputFiles
     .filter((file) => file.endsWith(".svg"))
     .map((file) => {
+      let contents = fs.readFileSync(file).toString();
+
+      // Add to manifest
       let name = path
         .basename(file, ".svg")
         .toLowerCase()
         .trim()
         .replace(/[^\w]/g, "-");
-      let contents = fs.readFileSync(file).toString();
-
-      // Add to manifest
+      if (file.includes("badge") && !name.includes("badge")) {
+        // Badges are special in game-icons!
+        name = "badge-" + name;
+      }
       manifest[name] = [...(manifest[name] || []), file];
       if (manifest[name].length > 1) {
         // Fix names of duplicate assets in the same manifest
@@ -79,8 +83,10 @@ function genSVGSymbols(pack: keyof typeof PACKS) {
         .replace(/(\r|\n)+/g, "")
         // Remove svg args that we define in stylesheet instead
         .replace(/(xmlns|class|width|height|fill|stroke)(-\w+)?="[^">]*"/gi, "")
-        // tabler-icons likes to emit a box around the icon
+        // tabler-icons likes to emit a box around the icons
         .replace(/d="M0 0h24v24H0z"/gi, "")
+        // game-icons likes to emit a circle around the badges
+        .replace(/cx="128" cy="128" r="(128|101)"/gi, "")
         // Remove empty tags
         .replace(/<\s*\w+\s*\/>/g, "")
         // Remove extra spaces
