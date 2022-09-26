@@ -1,15 +1,18 @@
 {
   "include": ["src"],
   "exclude": ["node_modules", "dist", "test"],
+
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
     "typeRoots": ["./src/@types", "./node_modules/@types"],
+
     "jsx": "react-jsx",
     "lib": ["DOM", "ESNext", "ScriptHost"],
     "module": "ES6",
     "moduleResolution": "node",
     "target": "ES6",
+
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "allowUmdGlobalAccess": true,
@@ -27,5 +30,20 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true
+  },
+
+  "ts-node": {
+    "include": ["src", "test", "scripts"],
+    "exclude": ["node_modules", "dist"],
+
+    "compilerOptions": {
+      "module": "CommonJS",
+
+      "importHelpers": false,
+      "isolatedModules": false,
+      "noImplicitAny": false,
+      "noUnusedLocals": false,
+      "noUnusedParameters": false
+    }
   }
 }

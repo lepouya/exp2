@@ -5,6 +5,7 @@
 - Table headers
 - Fix wording of buy-all button
 - Array random select with priorities
+- Include license and manifest in svg file
 
 # Things to experiment with
 
@@ -13,6 +14,7 @@
 - Screen glitching
 - Blurry text
 - Prestige
+- Icon badging + maybe other libraries?
 
 # Long term ideals
 
@@ -21,3 +23,4 @@
 - Document utils and models
 - Better unit test coverage
 - Rename Nux to Popup
+- Libraries for icons, toast, nux, resources, progress bars

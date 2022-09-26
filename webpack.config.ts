@@ -1,9 +1,14 @@
-const CopyPlugin = require("copy-webpack-plugin");
-const PugPlugin = require("pug-plugin");
-const package = require("./package.json");
-const webpack = require("webpack");
+import CopyPlugin from "copy-webpack-plugin";
+import PugPlugin from "pug-plugin";
+import { Module, ProgressPlugin } from "webpack";
+import { WebpackConfiguration } from "webpack-dev-server";
 
-module.exports = (env, argv) => {
+import pkg from "./package.json";
+
+function config(
+  env: NodeJS.ProcessEnv,
+  argv: Record<string, string>,
+): WebpackConfiguration {
   const debug = argv.mode !== "production" && !env.production;
   const min = debug ? "" : ".min";
 
@@ -13,7 +18,7 @@ module.exports = (env, argv) => {
     devtool: debug ? "source-map" : undefined,
 
     entry: {
-      index: package.main,
+      index: pkg.main,
     },
 
     resolve: {
@@ -22,9 +27,9 @@ module.exports = (env, argv) => {
 
     output: {
       assetModuleFilename: "[path][name][ext][query]",
-      clean: env.clean ?? false,
+      clean: !!env.clean,
       filename: (pd) =>
-        pd.chunk.name.split(".").shift().replace("index", package.name) +
+        pd.chunk?.name?.split(".").shift()?.replace("index", pkg.name) +
         min +
         ".js",
       path: __dirname + "/dist",
@@ -57,13 +62,11 @@ module.exports = (env, argv) => {
     },
 
     plugins: [
-      new webpack.ProgressPlugin(),
+      new ProgressPlugin(),
       new CopyPlugin({ patterns: [{ from: "assets" }] }),
       new PugPlugin({
         pretty: debug,
-        modules: [
-          PugPlugin.extractCss({ filename: package.name + min + ".css" }),
-        ],
+        modules: [PugPlugin.extractCss({ filename: pkg.name + min + ".css" })],
       }),
     ],
 
@@ -72,14 +75,14 @@ module.exports = (env, argv) => {
       runtimeChunk: "single",
       splitChunks: {
         chunks: "all",
-        minSize: 131072,
-        name: (m, _, key) =>
+        minSize: 128 * 1024,
+        name: (m: Module, _: any, key: string) =>
           key === "default" ? m.identifier().split(/[\\/]/).pop() : "vendors",
       },
     },
 
     performance: {
-      assetFilter: (fn) => /\.(js|css|html)$/.test(fn),
+      assetFilter: (fn: string) => /\.(js|css|html)$/.test(fn),
       maxAssetSize: 1024 * 1024,
       maxEntrypointSize: 1024 * 1024,
     },
@@ -94,4 +97,6 @@ module.exports = (env, argv) => {
       open: true,
     },
   };
-};
+}
+
+export default config;
