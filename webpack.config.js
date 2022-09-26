@@ -79,8 +79,9 @@ module.exports = (env, argv) => {
     },
 
     performance: {
-      maxEntrypointSize: 4 * 1024 * 1024,
+      assetFilter: (fn) => /\.(js|css|html)$/.test(fn),
       maxAssetSize: 1024 * 1024,
+      maxEntrypointSize: 1024 * 1024,
     },
 
     devServer: {

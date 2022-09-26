@@ -4,13 +4,13 @@ import tickTimer from "../utils/tickTimer";
 export const timers: Partial<Resource>[] = [
   {
     name: "totalTime",
-    icon: "clock",
+    icon: "ti:clock",
     display: "time",
     tick: tickTimer(),
   },
   {
     name: "activeTime",
-    icon: "alarm",
+    icon: "ti:alarm",
     display: "time",
     extra: {
       current: 0,
@@ -20,7 +20,7 @@ export const timers: Partial<Resource>[] = [
   },
   {
     name: "offlineTime",
-    icon: "user-off",
+    icon: "ti:user-off",
     display: "time",
     extra: {
       current: 0,

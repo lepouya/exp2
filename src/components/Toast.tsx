@@ -38,9 +38,9 @@ toast.fail = (message: string, options?: ToastOptions) =>
 const rows = { top: "top", bottom: "bottom" };
 const groups = { left: "left", center: "center", right: "right" };
 const icons = {
-  info: "info-circle",
-  success: "circle-check",
-  fail: "alert-circle",
+  info: "ti:info-circle",
+  success: "ti:circle-check",
+  fail: "ti:alert-circle",
 };
 let all_toasts: Expansion<string, ToastOptions[]>;
 let root: Root;

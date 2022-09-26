@@ -1,6 +1,9 @@
 # Compiled
 dist/
 
+# Externally downloaded assets
+external-assets/
+
 # Logs
 logs
 *.log

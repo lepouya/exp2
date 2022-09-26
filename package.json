@@ -11,6 +11,7 @@
     "debug": "webpack",
     "build": "webpack --mode=production",
     "test": "env TS_NODE_PROJECT=test/tsconfig.json mocha -r ts-node/register test/**/*.ts",
+    "sprites": "npx ts-node scripts/make-sprites.ts",
     "update": "ncu --doctor -u && rm -rf node_modules && npm update",
     "release": "webpack --mode=production --env clean -o ../lepouya.github.io/exp2/"
   },

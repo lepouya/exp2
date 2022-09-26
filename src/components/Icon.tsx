@@ -1,7 +1,5 @@
 import Arr from "../utils/arrays";
 
-const ICONS_FILE = "sprites/tabler-icons.svg";
-
 export type IconProps = {
   icon: string;
 
@@ -13,10 +11,20 @@ export type IconProps = {
 
 export default function Icon(props: IconProps) {
   const parts = props.icon.split(/\s+/).filter((s) => s.trim().length > 0);
-  const icon = parts.pop() ?? props.icon;
+  let pack = "";
+  let icon = parts.pop() ?? props.icon;
   let color = parts.pop() ?? props.color;
 
-  const classNames = ["icon", icon && "icon-" + icon, props.className];
+  if (icon.includes(":")) {
+    [pack, icon] = icon.split(":", 2);
+  }
+
+  const classNames = [
+    "icon",
+    pack && "icon-" + pack,
+    icon && "icon-" + icon,
+    props.className,
+  ];
   if (color && !color.startsWith("#")) {
     classNames.push(color);
     color = undefined;
@@ -29,7 +37,7 @@ export default function Icon(props: IconProps) {
       height={props.size}
       color={color}
     >
-      <use xlinkHref={`${ICONS_FILE}#tabler-${icon}`} />
+      <use href={`${pack ? `sprites/${pack}.svg` : ""}#${icon}`} />
     </svg>
   );
 }

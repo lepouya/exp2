@@ -138,7 +138,7 @@ const tabs: Record<"left" | "right", Generative<GameTab, [Context]>[]> = {
       placement: "right",
       order: 0,
       enabled: true,
-      icon: "settings",
+      icon: "ti:settings",
       body: <Options />,
     },
   ],

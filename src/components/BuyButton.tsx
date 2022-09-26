@@ -306,4 +306,7 @@ const buyAmounts: Record<string, { min: number; max: number; inc: number }> = {
   max: { min: 1, max: 1000, inc: 1 },
 };
 
-const buyIcons: Record<string, string> = { x: "arrow-bar-to-right", "+": "x" };
+const buyIcons: Record<string, string> = {
+  x: "ti:arrow-bar-to-right",
+  "+": "ti:x",
+};
