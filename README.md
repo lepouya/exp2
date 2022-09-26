@@ -4,8 +4,8 @@
 - Theme-like registry for number formats
 - Table headers
 - Fix wording of buy-all button
-- Lazy loading of icons
 - Loading from multiple icon libraries
+- Array random select with priorities
 
 # Things to experiment with
 

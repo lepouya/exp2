@@ -47,10 +47,6 @@ module.exports = (env, argv) => {
           use: [PugPlugin.loader],
         },
         {
-          test: /\.svg$/i,
-          type: "asset/source",
-        },
-        {
           test: /\.ttf$/i,
           type: "asset/resource",
           generator: {

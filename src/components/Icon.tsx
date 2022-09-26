@@ -1,7 +1,6 @@
-import tablerIcons from "../../assets/sprites/tabler-sprite-nostroke.svg";
-import { ContextInitializers } from "../model/Context";
 import Arr from "../utils/arrays";
-import { getHTMLElement } from "../utils/document";
+
+const ICONS_FILE = "sprites/tabler-icons.svg";
 
 export type IconProps = {
   icon: string;
@@ -30,11 +29,7 @@ export default function Icon(props: IconProps) {
       height={props.size}
       color={color}
     >
-      <use xlinkHref={`#tabler-${icon}`} />
+      <use xlinkHref={`${ICONS_FILE}#tabler-${icon}`} />
     </svg>
   );
 }
-
-ContextInitializers.push(
-  () => (getHTMLElement("icon").innerHTML = tablerIcons),
-);
