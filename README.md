@@ -3,7 +3,6 @@
 - Turn nux states into a resource
 - Theme-like registry for number formats
 - Table headers
-- Fix wording of buy-all button
 - Array random select with priorities
 
 # Things to experiment with

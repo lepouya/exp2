@@ -16,7 +16,7 @@ function config(
     devtool: min ? false : "source-map",
     context: __dirname,
     entry: { index: pkg.main },
-    resolve: { extensions: [".ts", ".tsx", ".scss"] },
+    resolve: { extensions: [".ts", ".tsx", ".js"] },
 
     output: {
       assetModuleFilename: "[path][name][ext][query]",
