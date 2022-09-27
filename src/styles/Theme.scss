@@ -1,19 +1,27 @@
 @use "sass:color";
-@use "sass:meta";
 
 @function color($name, $alpha: "") {
-  @if $alpha == "" or $alpha == 100% or alpha == 1 {
+  @if $alpha == "" or $alpha == 100% or $alpha == "100%" or $alpha == 1 {
     @return rgba(var(--#{$name}-color));
+  } @else if $alpha == 0% or $alpha == "0%" or $alpha == 0 or $alpha == "0" {
+    @return transparent;
   } @else {
     @return rgba(var(--#{$name}-color) / $alpha);
   }
 }
 
 @mixin background($top: "", $args...) {
-  @each $color, $alpha in meta.keywords($args) {
-    $color: color($color, $alpha);
-    $top: if($top == "", "", $top + ", ") + linear-gradient(0, $color, $color);
+  $kwargs: keywords($args);
+
+  @for $i from 0 to length($kwargs) {
+    $color: #{color(nth($kwargs, $i + 1)...)};
+    @if $i < length($kwargs) - 1 {
+      $color: linear-gradient($color, $color);
+    }
+
+    $top: if($top == "", "", $top + ", ") + $color;
   }
+
   background: #{$top};
 }
 
@@ -22,7 +30,7 @@
 }
 
 @mixin color-theme($args...) {
-  @each $name, $color in meta.keywords($args) {
+  @each $name, $color in keywords($args) {
     --#{$name}-color: #{expand($color)};
   }
 }
@@ -74,4 +82,30 @@
   font-weight: var(--font-weight);
 
   color: color(primary);
+}
+
+$grades: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+$intensities: 0, 5, 10, 15, 20, 25, 33, 50, 66, 80, 100;
+$color-classes: primary, secondary, neutral, positive, negative;
+
+@each $grade in $grades {
+  $intensity: nth($intensities, $grade + 1);
+
+  @each $color-class in $color-classes {
+    .#{$color-class}#{if($grade > 0, -$grade, "")} {
+      color: color($color-class, (100 - $intensity) + #{"%"});
+    }
+
+    .#{$color-class}-bg#{if($grade > 0, -$grade, "")} {
+      @include background(
+        ($color-class: $intensity + #{"%"})...,
+        (if($color-class == secondary, primary, secondary): 100%)...
+      );
+    }
+  }
+}
+
+// aka "neutral"
+.zero {
+  color: color(neutral);
 }

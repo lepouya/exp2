@@ -1,15 +1,5 @@
 @use "./Theme";
 
-.zero {
-  color: Theme.color(neutral);
-}
-.positive {
-  color: Theme.color(positive);
-}
-.negative {
-  color: Theme.color(negative);
-}
-
 .highlight {
   position: relative;
   z-index: 9;
