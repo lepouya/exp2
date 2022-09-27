@@ -2,7 +2,6 @@
 
 - Turn nux states into a resource
 - Theme-like registry for number formats
-- Table headers
 - Array random select with priorities
 
 # Things to experiment with

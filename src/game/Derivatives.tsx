@@ -129,7 +129,8 @@ function RenderDerivatives(props: { name: string }) {
 
   return (
     <div className="panel">
-      <RenderDerivative resource={main} header={true} rest={ress} />
+      <RenderTitle resource={main} rest={ress} />
+      {ress && ress[0] && <RenderHeader />}
       {ress.map((res) => (
         <RenderDerivative key={res.name} resource={res} />
       ))}
@@ -143,84 +144,109 @@ function RenderDerivatives(props: { name: string }) {
   );
 }
 
-function RenderDerivative(props: {
+function RenderTitle(props: {
   resource: Resource<Context>;
   rest?: Resource<Context>[];
-  header?: boolean;
 }) {
+  const fmt = Format.resource(props.resource);
+
+  return (
+    <>
+      <div className="full center bold">
+        {fmt.icon && <Icon icon={fmt.icon} size="1em" />}
+        {fmt.name?.toUpperCase()}
+        &nbsp;: &nbsp;
+        {fmt.value}
+      </div>
+      <div className="quarter">
+        <BuyButton
+          resource={props.resource}
+          overrideBuyAmount="+1"
+          prefix="Add"
+        />
+      </div>
+      <div className="half center">
+        {fmt.rateSign !== "zero" && (
+          <div className={fmt.rateSign}>{`(${fmt.rate})`}</div>
+        )}
+      </div>
+      <div className="quarter">
+        {props.rest && props.rest[0] && props.rest[0].count.gt(10) && (
+          <BuyButton.BuyAllButton
+            resources={props.rest}
+            showNames={false}
+            overrideCount="base"
+            all={`all ${fmt.name}'s`}
+          />
+        )}
+      </div>
+      <hr className="underlined" />
+    </>
+  );
+}
+
+function RenderHeader() {
+  return (
+    <>
+      <div className="quarter">
+        <div className="full">Derivative</div>
+        <div className="zero three-quarters right">Boost Multi</div>
+      </div>
+      <div className="quarter">
+        <div className="full">Value</div>
+        <div className="zero three-quarters right">(# Bought)</div>
+      </div>
+      <div className="quarter">
+        <div className="positive">(Gain Rate)</div>
+      </div>
+      <div className="quarter right"></div>
+      <hr className="dotted" />
+    </>
+  );
+}
+
+function RenderDerivative(props: { resource: Resource<Context> }) {
   if (!(props.resource.unlocked ?? true) || props.resource.disabled) {
     return null;
   }
 
-  const res = props.resource;
   const fmt = Format.resource(props.resource);
-
   if (fmt.active !== "active") {
     return <div className="full">{fmt.active}</div>;
-  } else if (props.header) {
-    return (
-      <>
-        <div className="full center bold">
-          {fmt.icon && <Icon icon={fmt.icon} size="1em" />}
-          {fmt.name?.toUpperCase()}
-          &nbsp;: &nbsp;
-          {fmt.value}
-        </div>
-        <div className="quarter">
-          <BuyButton resource={res} overrideBuyAmount="+1" prefix="Add" />
-        </div>
-        <div className="half center">
-          {fmt.rateSign !== "zero" && (
-            <div className={fmt.rateSign}>{`(${fmt.rate})`}</div>
-          )}
-        </div>
-        <div className="quarter">
-          {props.rest && props.rest[0] && props.rest[0].count.gt(10) && (
-            <BuyButton.BuyAllButton
-              resources={props.rest}
-              showNames={false}
-              overrideCount="base"
-              all={`all ${fmt.name}'s`}
-            />
-          )}
-        </div>
-        <hr className="underlined" />
-      </>
-    );
-  } else {
-    return (
-      <>
-        <div className="quarter">
-          <div className="full">
-            {fmt.icon && <Icon icon={fmt.icon} size="1em" />}
-            {fmt.name}
-          </div>
-          {res.extra.factor > 1 && (
-            <div className="zero three-quarters right">
-              {`x${fmt.extras["Factor"]}`}
-            </div>
-          )}
-        </div>
-        <div className="quarter">
-          <div className="full">{fmt.value}</div>
-          {res.extra.base > 0 && (
-            <div className="zero three-quarters right">
-              {`(${fmt.extras["Base"]})`}
-            </div>
-          )}
-        </div>
-        <div className="quarter">
-          {fmt.rateSign !== "zero" && (
-            <div className={fmt.rateSign}>{`(${fmt.rate})`}</div>
-          )}
-        </div>
-        <div className="quarter">
-          <BuyButton resource={res} overrideCount="base" />
-        </div>
-        <hr className="dotted" />
-      </>
-    );
   }
+
+  return (
+    <>
+      <div className="quarter">
+        <div className="full">
+          {fmt.icon && <Icon icon={fmt.icon} size="1em" />}
+          {fmt.name}
+        </div>
+        {props.resource.extra.factor > 1 && (
+          <div className="zero three-quarters right">
+            {`x${fmt.extras["Factor"]}`}
+          </div>
+        )}
+      </div>
+      <div className="quarter">
+        <div className="full">{fmt.value}</div>
+        {props.resource.extra.base > 0 && (
+          <div className="zero three-quarters right">
+            {`(${fmt.extras["Base"]})`}
+          </div>
+        )}
+      </div>
+      <div className="quarter">
+        {fmt.rateSign !== "zero" && (
+          <div className={fmt.rateSign}>{`(${fmt.rate})`}</div>
+        )}
+      </div>
+      <div className="quarter">
+        <BuyButton resource={props.resource} overrideCount="base" />
+      </div>
+      <hr className="dotted" />
+    </>
+  );
 }
 
 function buyAllDerivatives(context: Context, name: string) {
