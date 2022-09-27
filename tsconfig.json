@@ -1,6 +1,6 @@
 {
   "include": ["src"],
-  "exclude": ["node_modules", "dist", "test"],
+  "exclude": ["node_modules", "dist"],
 
   "compilerOptions": {
     "rootDir": "./src",
@@ -33,9 +33,6 @@
   },
 
   "ts-node": {
-    "include": ["src", "test", "scripts"],
-    "exclude": ["node_modules", "dist"],
-
     "compilerOptions": {
       "module": "CommonJS",
 

@@ -9,29 +9,20 @@ function config(
   env: NodeJS.ProcessEnv,
   argv: Record<string, string>,
 ): WebpackConfiguration {
-  const debug = argv.mode !== "production" && !env.production;
-  const min = debug ? "" : ".min";
+  const min = argv.mode !== "production" && !env.production ? "" : ".min";
 
   return {
+    mode: min ? "production" : "development",
+    devtool: min ? false : "source-map",
     context: __dirname,
-    mode: debug ? "development" : "production",
-    devtool: debug ? "source-map" : undefined,
-
-    entry: {
-      index: pkg.main,
-    },
-
-    resolve: {
-      extensions: [".ts", ".tsx", ".js", ".scss"],
-    },
+    entry: { index: pkg.main },
+    resolve: { extensions: [".ts", ".tsx", ".scss"] },
 
     output: {
       assetModuleFilename: "[path][name][ext][query]",
       clean: !!env.clean,
-      filename: (pd) =>
-        pd.chunk?.name?.split(".").shift()?.replace("index", pkg.name) +
-        min +
-        ".js",
+      filename: ({ chunk }) =>
+        chunk!.name!.replace(/index.*/, pkg.name) + min + ".js",
       path: __dirname + "/dist",
       publicPath: "",
     },
@@ -65,19 +56,18 @@ function config(
       new ProgressPlugin(),
       new CopyPlugin({ patterns: [{ from: "assets" }] }),
       new PugPlugin({
-        pretty: debug,
+        pretty: !min,
         modules: [PugPlugin.extractCss({ filename: pkg.name + min + ".css" })],
       }),
     ],
 
     optimization: {
-      minimize: !debug,
-      runtimeChunk: "single",
+      minimize: !!min,
       splitChunks: {
         chunks: "all",
         minSize: 128 * 1024,
         name: (m: Module, _: any, key: string) =>
-          key === "default" ? m.identifier().split(/[\\/]/).pop() : "vendors",
+          key === "default" ? m.identifier() : "vendors",
       },
     },
 

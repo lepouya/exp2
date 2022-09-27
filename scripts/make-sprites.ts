@@ -52,11 +52,10 @@ function genSVGSymbols(pack: keyof typeof PACKS) {
 
   const inputFiles = getAllFiles(path.join(INPUT_PATH, PACKS[pack].path));
   const outputFile = path.join(OUTPUT_PATH, pack + ".svg");
-  const manifestFile = path.join(OUTPUT_PATH, pack + ".json");
   const manifest: Record<string, string[]> = {};
 
   let contents = inputFiles
-    .filter((file) => file.endsWith(".svg"))
+    .filter((file) => /\.svg$/i.test(file))
     .map((file) => {
       let contents = fs.readFileSync(file).toString();
 
@@ -118,25 +117,16 @@ function genSVGSymbols(pack: keyof typeof PACKS) {
     "</svg>",
   ];
 
-  // Generate the manifest contents
-  const manifestContents: Record<string, string> = {};
-  Object.keys(manifest)
-    .sort()
-    .forEach((icon) => {
-      let asset = manifest[icon].shift() ?? icon;
-      asset = asset
-        // No need to include the input dir
-        .replace(INPUT_PATH, "")
-        // Get rid of extra path delimeters
-        .replace(/[/\\]+/g, "/")
-        // Trim the beginning and end just in case
-        .replace(/(^[^\w]+)|([^\w]+$)/, "");
-      manifestContents[icon] = asset;
-    });
-
   // Write output
-  fs.writeFileSync(manifestFile, JSON.stringify(manifestContents, null, 2));
   fs.writeFileSync(outputFile, contents.join(""));
+  console.log(
+    "Generated",
+    outputFile,
+    "using",
+    contents.length,
+    "sprites from",
+    PACKS[pack].path,
+  );
 }
 
 let pack: keyof typeof PACKS;
