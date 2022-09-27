@@ -43,7 +43,7 @@ function config(
           use: [PugPlugin.loader],
         },
         {
-          test: /\.ttf$/i,
+          test: /\.(ttf|eot|woff|woff2)$/i,
           type: "asset/resource",
           generator: {
             filename: "fonts/[name][ext]",
