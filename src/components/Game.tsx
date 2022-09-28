@@ -21,26 +21,10 @@ export default function Game() {
   const [timerId, setTimerId] = useState<NodeJS.Timer | undefined>();
   const [_, setLastRendered] = useState(0);
 
-  const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (
-      event.target &&
-      BLOCKED_DOM_ELEMS.includes(
-        (event.target as HTMLElement).tagName.toUpperCase(),
-      )
-    ) {
-      return;
-    }
-
-    const callbacks = shortcuts[event.key.toLowerCase()];
-    if (callbacks && callbacks.length > 0) {
-      callbacks.forEach((cb) => {
-        if (cb(context, event)) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      });
-    }
-  }, []);
+  const handleKeyPress = useCallback(
+    (ev: KeyboardEvent) => processShortcuts(context, ev),
+    [context],
+  );
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyPress);
@@ -160,6 +144,26 @@ Game.registerTab = (tab: Generative<GameTab, [Context]>) => {
   );
 };
 
+function TabLink({ tab }: { tab: GameTab }) {
+  if (!(tab.enabled ?? true)) {
+    return null;
+  }
+
+  const location = useLocation();
+  return (
+    <div id={`tab-${tab.path.replace(/\W/g, "") || "main"}`}>
+      <NavLink
+        className={(p) => (p.isActive ? "active" : undefined)}
+        to={{ pathname: tab.path, search: location.search }}
+        end
+      >
+        {typeof tab.icon === "string" ? <Icon icon={tab.icon} /> : tab.icon}
+        {tab.heading && <span>{tab.heading}</span>}
+      </NavLink>
+    </div>
+  );
+}
+
 const BLOCKED_DOM_ELEMS = ["TEXTAREA", "INPUT"];
 type ShortcutCallback = (context: Context, event: KeyboardEvent) => boolean;
 const shortcuts: Record<string, ShortcutCallback[]> = {
@@ -183,22 +187,23 @@ Game.registerShortcut = (key: string, callback: ShortcutCallback) => {
   }
 };
 
-function TabLink({ tab }: { tab: GameTab }) {
-  if (!(tab.enabled ?? true)) {
-    return null;
+function processShortcuts(context: Context, event: KeyboardEvent) {
+  if (
+    event.target &&
+    BLOCKED_DOM_ELEMS.includes(
+      (event.target as HTMLElement).tagName.toUpperCase(),
+    )
+  ) {
+    return;
   }
 
-  const location = useLocation();
-  return (
-    <div id={`tab-${tab.path.replace(/\W/g, "") || "main"}`}>
-      <NavLink
-        className={(p) => (p.isActive ? "active" : undefined)}
-        to={{ pathname: tab.path, search: location.search }}
-        end
-      >
-        {typeof tab.icon === "string" ? <Icon icon={tab.icon} /> : tab.icon}
-        {tab.heading && <span>{tab.heading}</span>}
-      </NavLink>
-    </div>
-  );
+  const callbacks = shortcuts[event.key.toLowerCase()];
+  if (callbacks && callbacks.length > 0) {
+    callbacks.forEach((cb) => {
+      if (cb(context, event)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+  }
 }
