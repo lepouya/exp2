@@ -24,9 +24,9 @@ export type Settings = {
   // Game settings
   sellRatio: number;
   timeDilation: number;
-  buyAmount?: string;
-  numberFormat?: string;
-  theme?: string;
+  buyAmount: string;
+  numberFormat: string;
+  theme: string;
 };
 
 export const defaultSettings: Settings = {
@@ -50,7 +50,7 @@ export const defaultSettings: Settings = {
 
   sellRatio: 0.8,
   timeDilation: 1.0,
-  buyAmount: "",
-  numberFormat: "",
-  theme: "",
+  buyAmount: "+1",
+  numberFormat: "Standard",
+  theme: "light",
 };

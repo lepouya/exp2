@@ -88,9 +88,11 @@ export default function Options() {
   }
 
   function changeTheme(event: MouseEvent) {
-    settings.theme =
-      (event.target as HTMLElement).getAttribute("theme") ?? undefined;
-    setTheme(settings.theme);
+    const theme = (event.target as HTMLElement).getAttribute("theme");
+    if (theme) {
+      settings.theme = theme;
+      setTheme(theme);
+    }
   }
 
   function changeNumberFormat(event: MouseEvent) {
@@ -114,7 +116,7 @@ export default function Options() {
         <div className="title-bar">Theme Options</div>
         <div className="full">
           Current theme is: &nbsp;
-          {themes[settings.theme ?? ""] ?? "default"}
+          {themes[settings.theme]}
         </div>
         {Object.keys(themes).map((theme) => (
           <div key={`theme-${theme}`} className="half center">
@@ -133,8 +135,7 @@ export default function Options() {
         <hr className="dashed" />
         <div className="full">
           Current number format is: &nbsp;
-          {formatWithNotation.all[settings.numberFormat ?? ""]?.name ??
-            "default"}
+          {formatWithNotation.all[settings.numberFormat].name}
         </div>
         {Object.values(formatWithNotation.all).map((notation) => (
           <div key={`notation-${notation.name}`} className="half center">

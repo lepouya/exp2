@@ -1,7 +1,6 @@
 # Todo plan
 
 - Turn nux states into a resource
-- Theme-like registry for number formats
 
 # Things to experiment with
 
