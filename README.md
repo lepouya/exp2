@@ -1,7 +1,7 @@
 # Todo plan
 
 - Turn resource into a class
-- Turn nux states into a resource
+- Maybe save settings as a resource too?
 - Grids of 3/4/6 sided polygons
 
 # Things to experiment with

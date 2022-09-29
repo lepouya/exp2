@@ -40,17 +40,15 @@ export function emptyContext<TickResult>(
     lastLoaded: Date.now(),
   };
   context.resourceManager = genResourceManager(context, context.settings);
-  context.nuxManager ??= genNuxManager(context);
-  context.nuxManager.currentStates = {};
+  context.nuxManager ??= genNuxManager(
+    context,
+    context.resourceManager.upsert("nux:states"),
+  );
 
   context.init();
   ContextInitializers.forEach((init) => init(context));
 
-  return Store.setSaveProperties(context, [
-    "settings",
-    "resourceManager",
-    "nuxManager",
-  ]);
+  return Store.setSaveProperties(context, ["settings", "resourceManager"]);
 }
 
 export function wrapContext<TickResult>(context: Context<TickResult>) {
@@ -71,10 +69,6 @@ function _load<TickResult>(
 
   if (loaded) {
     Obj.copy(newContext.settings, context.settings);
-    Obj.copy(
-      newContext.nuxManager.currentStates,
-      context.nuxManager.currentStates,
-    );
     Object.values(newContext.resourceManager.resources || {}).forEach((res) =>
       context.resourceManager.upsert(res),
     );

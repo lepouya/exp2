@@ -54,14 +54,13 @@ export default function NuxRoot() {
 
     const priority =
       nextNux?.name && nextNux?.name === nux?.name
-        ? nuxManager.currentStates[nux?.name ?? ""].priority
-        : undefined;
-    delete nuxManager.currentStates[nux?.name ?? ""];
+        ? nuxManager.currentStates.extra[nux.name + ":priority"]
+        : Infinity;
+    delete nuxManager.currentStates.extra[nux?.name ?? ""];
+    delete nuxManager.currentStates.extra[(nux?.name ?? "") + ":priority"];
     if (validNux(nextNux)) {
-      nuxManager.currentStates[nextNux?.name!] = {
-        step: nextNux?.step!,
-        priority,
-      };
+      nuxManager.currentStates.extra[nextNux?.name!] = nextNux?.step!;
+      nuxManager.currentStates.extra[nextNux?.name! + ":priority"] = priority;
     }
   }
 
@@ -179,7 +178,8 @@ function registerOfflineSummary(context: Context) {
       dt >= settings.offlineSummaryMinSecs &&
       Object.keys(changes).length > 0
     ) {
-      nm.currentStates.OfflineSummary = { priority: 0 };
+      nm.currentStates.extra["OfflineSummary"] = 0;
+      nm.currentStates.extra["OfflineSummary:priority"] = 0;
     }
   };
 }

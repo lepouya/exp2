@@ -1,7 +1,7 @@
 import generate, { Generative } from "../utils/generate";
 import Obj from "../utils/objects";
-import { setSaveProperties } from "../utils/store";
 import { Optional } from "../utils/types";
+import { Resource } from "./Resource";
 
 export type Nux = {
   readonly name: string;
@@ -32,9 +32,8 @@ export type Nux = {
 
 export type NuxManager<Context> = {
   readonly context: Context;
+  readonly currentStates: Resource<Context>;
   readonly nuxes: Record<string, Record<number, NuxGenerator<Context>>>;
-
-  currentStates: Record<string, { step?: number; priority?: number }>;
 
   register: (...nuxes: NuxGenerator<Context>[]) => void;
   resolve: (name?: string, step?: number) => Nux | undefined;
@@ -44,11 +43,14 @@ export type NuxManager<Context> = {
 
 export type NuxGenerator<Context> = Generative<Nux, [NuxManager<Context>]>;
 
-export function genNuxManager<Context>(context: Context): NuxManager<Context> {
+export function genNuxManager<Context>(
+  context: Context,
+  currentStates: Resource<Context>,
+): NuxManager<Context> {
   const nm: NuxManager<Context> = {
     context,
+    currentStates: currentStates,
     nuxes: {},
-    currentStates: {},
 
     register(...nuxes) {
       nuxes.forEach((nux) => {
@@ -112,17 +114,18 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
     },
 
     genCurrentNux() {
-      return Object.keys(nm.currentStates)
+      return Object.keys(nm.currentStates.extra)
+        .filter((extra) => !extra.endsWith(":priority"))
         .sort(
           (a, b) =>
-            (nm.currentStates[a].priority ?? Infinity) -
-            (nm.currentStates[b].priority ?? Infinity),
+            (nm.currentStates.extra[a + ":priority"] ?? Infinity) -
+            (nm.currentStates.extra[b + ":priority"] ?? Infinity),
         )
         .reduce(function (showNux, curNux) {
           if (showNux) {
             return showNux;
           }
-          const nux = nm.resolve(curNux, nm.currentStates[curNux].step);
+          const nux = nm.resolve(curNux, nm.currentStates.extra[curNux]);
           if (nux && nux.enabled) {
             return nux;
           } else {
@@ -132,5 +135,5 @@ export function genNuxManager<Context>(context: Context): NuxManager<Context> {
     },
   };
 
-  return setSaveProperties(nm, ["currentStates"]);
+  return nm;
 }
