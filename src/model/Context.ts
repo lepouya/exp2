@@ -40,10 +40,7 @@ export function emptyContext<TickResult>(
     lastLoaded: Date.now(),
   };
   context.resourceManager = genResourceManager(context, context.settings);
-  context.nuxManager ??= genNuxManager(
-    context,
-    context.resourceManager.upsert("nux:states"),
-  );
+  context.nuxManager ??= genNuxManager(context, context.resourceManager);
 
   context.init();
   ContextInitializers.forEach((init) => init(context));

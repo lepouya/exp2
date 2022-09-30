@@ -10,7 +10,7 @@ import { Nullable, Optional } from "../utils/types";
 
 export default function NuxRoot() {
   const { nuxManager } = useGameContext();
-  const nux = nuxManager.genCurrentNux();
+  const nux = nuxManager.getCurrentNux();
 
   useEffect(() => {
     const onMount = nux?.onMount;
@@ -38,6 +38,7 @@ export default function NuxRoot() {
   if (!nux) {
     return null;
   }
+
   function validNux(otherNux: Optional<Nux>) {
     return (
       otherNux?.name != null &&
@@ -52,15 +53,13 @@ export default function NuxRoot() {
   function gotoNux(nextNux: Optional<Nux>, event?: MouseEvent) {
     event?.preventDefault();
 
-    const priority =
-      nextNux?.name && nextNux?.name === nux?.name
-        ? nuxManager.currentStates.extra[nux.name + ":priority"]
-        : Infinity;
-    delete nuxManager.currentStates.extra[nux?.name ?? ""];
-    delete nuxManager.currentStates.extra[(nux?.name ?? "") + ":priority"];
-    if (validNux(nextNux)) {
-      nuxManager.currentStates.extra[nextNux?.name!] = nextNux?.step!;
-      nuxManager.currentStates.extra[nextNux?.name! + ":priority"] = priority;
+    const state = nuxManager.getNuxState(nux);
+    nuxManager.delNuxState(nux);
+    if (nextNux && validNux(nextNux)) {
+      nuxManager.setNuxState(
+        nextNux,
+        nextNux.name === state.name ? state.priority : undefined,
+      );
     }
   }
 
@@ -119,20 +118,24 @@ export default function NuxRoot() {
   }
 }
 
-function registerOfflineSummary(context: Context) {
-  const settings = context.settings;
-  const rm = context.resourceManager;
-  const nm = context.nuxManager;
-
-  nm.register({
+function registerOfflineSummary({
+  settings,
+  resourceManager,
+  nuxManager,
+}: Context) {
+  nuxManager.register({
     name: "OfflineSummary",
     title: "While you were offline...",
     bounds: { height: "32em" },
     body() {
-      const loadUpdate = rm.execution.load;
+      const loadUpdate = resourceManager.execution.load;
       const keys = Object.keys(loadUpdate?.lastChanges ?? {})
-        .filter((r) => isFinite(rm.resources[r].priority))
-        .sort((a, b) => rm.resources[a].priority - rm.resources[b].priority);
+        .filter((r) => isFinite(resourceManager.resources[r].priority))
+        .sort(
+          (a, b) =>
+            resourceManager.resources[a].priority -
+            resourceManager.resources[b].priority,
+        );
 
       let remainder = 0;
 
@@ -172,14 +175,13 @@ function registerOfflineSummary(context: Context) {
     },
   });
 
-  rm.onUpdateComplete = function (changes, dt, source) {
+  resourceManager.onUpdateComplete = function (changes, dt, source) {
     if (
       source === "load" &&
       dt >= settings.offlineSummaryMinSecs &&
       Object.keys(changes).length > 0
     ) {
-      nm.currentStates.extra["OfflineSummary"] = 0;
-      nm.currentStates.extra["OfflineSummary:priority"] = 0;
+      nuxManager.setNuxState("OfflineSummary", 0, 0);
     }
   };
 }
