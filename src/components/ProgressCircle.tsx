@@ -8,10 +8,13 @@ export type ProgressCircleProps = {
   startValue?: number;
   minValue?: number;
   maxValue?: number;
+
   width?: string | number;
   height?: string | number;
   showPercent?: boolean;
+
   className?: string;
+  style?: React.CSSProperties;
 };
 
 export default function ProgressCircle({
@@ -23,6 +26,7 @@ export default function ProgressCircle({
   height = width,
   showPercent,
   className,
+  style,
   children,
 }: PropsWithChildren<ProgressCircleProps>) {
   const pct = clamp((value - minValue) / (maxValue - minValue));
@@ -34,7 +38,7 @@ export default function ProgressCircle({
   return (
     <div
       className={Arr.className("progress-circle", className)}
-      style={{ minWidth: width, minHeight: height }}
+      style={{ minWidth: width, minHeight: height, ...style }}
     >
       <div className="children">
         {showPercent && <span>{Math.floor(100 * pct)}%</span>}

@@ -1,6 +1,11 @@
 // Inspired by github:Cogoport/cogo-toast
 
-import { MouseEventHandler, useEffect, useState } from "react";
+import {
+  MouseEventHandler,
+  PropsWithChildren,
+  useEffect,
+  useState,
+} from "react";
 import { createRoot, Root } from "react-dom/client";
 
 import Arr from "../utils/arrays";
@@ -8,7 +13,7 @@ import { getHTMLElement } from "../utils/document";
 import { Expansion, KeysUnion } from "../utils/types";
 import Icon, { IconProps } from "./Icon";
 
-export type ToastOptions = {
+export type ToastProps = PropsWithChildren<{
   id?: number;
 
   heading?: string;
@@ -20,20 +25,21 @@ export type ToastOptions = {
   type?: keyof typeof icons;
 
   onClick?: MouseEventHandler;
-  onHide?: (toast: ToastOptions) => void;
+  onHide?: (toast: ToastProps) => void;
 
   className?: string;
-};
+  style?: React.CSSProperties;
+}>;
 
-export default function toast(props?: ToastOptions | string) {
+export default function toast(props?: ToastProps | string) {
   return genToast(typeof props === "string" ? { message: props } : props ?? {});
 }
-toast.info = (message: string, options?: ToastOptions) =>
-  genToast({ ...options, message, type: "info" });
-toast.success = (message: string, options?: ToastOptions) =>
-  genToast({ ...options, message, type: "success" });
-toast.fail = (message: string, options?: ToastOptions) =>
-  genToast({ ...options, message, type: "fail" });
+toast.info = (message: string, props?: ToastProps) =>
+  genToast({ ...props, message, type: "info" });
+toast.success = (message: string, props?: ToastProps) =>
+  genToast({ ...props, message, type: "success" });
+toast.fail = (message: string, props?: ToastProps) =>
+  genToast({ ...props, message, type: "fail" });
 
 const rows = { top: "top", bottom: "bottom" };
 const groups = { left: "left", center: "center", right: "right" };
@@ -42,7 +48,7 @@ const icons = {
   success: "ti:circle-check",
   fail: "ti:alert-circle",
 };
-let all_toasts: Expansion<string, ToastOptions[]>;
+let all_toasts: Expansion<string, ToastProps[]>;
 let root: Root;
 let idx = 0;
 
@@ -52,21 +58,21 @@ window.addEventListener(
   false,
 );
 
-function genToast(options: ToastOptions) {
-  options = options ?? {};
-  options.id = options.id ?? idx++;
+function genToast(props: ToastProps) {
+  props = { ...props };
+  props.id = props.id ?? idx++;
 
-  const position = options.position ?? "top-right";
+  const position = props.position ?? "top-right";
   all_toasts = all_toasts ?? {};
   all_toasts[position] = all_toasts[position] ?? [];
   if (position.includes("bottom")) {
-    all_toasts[position].unshift(options);
+    all_toasts[position].unshift(props);
   } else {
-    all_toasts[position].push(options);
+    all_toasts[position].push(props);
   }
 
-  const onToastHide = options.onHide;
-  options.onHide = (toast) => {
+  const onToastHide = props.onHide;
+  props.onHide = (toast) => {
     const position = toast.position ?? "top-right";
     all_toasts[position] = all_toasts[position].filter(
       (item) => item.id !== toast.id,
@@ -80,9 +86,9 @@ function genToast(options: ToastOptions) {
   renderAllToasts();
   return {
     ...new Promise((resolve) =>
-      setTimeout(resolve, (options.duration ?? 3) * 1000),
+      setTimeout(resolve, (props.duration ?? 3) * 1000),
     ),
-    hide: () => options.onHide!(options),
+    hide: () => props.onHide!(props),
   };
 }
 
@@ -105,7 +111,7 @@ function renderAllToasts() {
   );
 }
 
-function Toast(props: ToastOptions) {
+function Toast(props: ToastProps) {
   const [shown, setShown] = useState("hidden");
 
   function hide() {
@@ -144,11 +150,13 @@ function Toast(props: ToastOptions) {
     <div
       className={Arr.className("toast", shown, props.type, props.className)}
       onClick={props.onClick ?? hide}
+      style={props.style}
     >
       {icon && <Icon {...icon} />}
       <div>
         {props.heading && <h4>{props.heading}</h4>}
         {props.message && <div className="message">{props.message}</div>}
+        {props.children && <div className="children">{props.children}</div>}
       </div>
     </div>
   );

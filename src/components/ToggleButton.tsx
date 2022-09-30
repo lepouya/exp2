@@ -5,11 +5,14 @@ import Arr from "../utils/arrays";
 export type ToggleButtonProps = {
   enabled?: boolean;
   checked?: boolean;
-  onChange?: (checked: boolean) => void;
+
   checkedContents?: JSX.Element | string;
   unCheckedContents?: JSX.Element | string;
+
   className?: string;
   style?: React.CSSProperties;
+
+  onChange?: (checked: boolean) => void;
 };
 
 export default function ToggleButton({

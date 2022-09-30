@@ -1,3 +1,5 @@
+import { PropsWithChildren } from "react";
+
 import Arr from "../utils/arrays";
 
 export type IconProps = {
@@ -7,9 +9,10 @@ export type IconProps = {
   size?: string;
 
   className?: string;
+  style?: React.CSSProperties;
 };
 
-export default function Icon(props: IconProps) {
+export default function Icon(props: PropsWithChildren<IconProps>) {
   const parts = props.icon.split(/\s+/).filter((s) => s.trim().length > 0);
   let pack = "";
   let icon = parts.pop() ?? props.icon;
@@ -36,8 +39,10 @@ export default function Icon(props: IconProps) {
       width={props.size}
       height={props.size}
       color={color}
+      style={props.style}
     >
       <use href={`${pack ? `sprites/${pack}.svg` : ""}#${icon}`} />
+      {props.children}
     </svg>
   );
 }

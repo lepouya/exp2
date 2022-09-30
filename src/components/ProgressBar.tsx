@@ -4,15 +4,19 @@ import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
 
 export type ProgressBarProps = {
+  enabled?: boolean;
+  orientation?: "horizontal" | "vertical";
+
   value?: number;
   minValue?: number;
   maxValue?: number;
-  orientation?: "horizontal" | "vertical";
+
   width?: string | number;
   height?: string | number;
   showPercent?: boolean;
-  enabled?: boolean;
+
   className?: string;
+  style?: React.CSSProperties;
 };
 
 export default function ProgressBar({
@@ -25,6 +29,7 @@ export default function ProgressBar({
   showPercent,
   enabled = isFinite(value),
   className,
+  style,
   children,
 }: PropsWithChildren<ProgressBarProps>) {
   const pct = clamp((value - minValue) / (maxValue - minValue));
@@ -34,7 +39,7 @@ export default function ProgressBar({
   return (
     <div
       className={Arr.className("progress-bar", className)}
-      style={{ minWidth: width, minHeight: height }}
+      style={{ minWidth: width, minHeight: height, ...style }}
     >
       <div className="children">
         {enabled && showPercent && <span>{Math.floor(100 * pct)}%</span>}
