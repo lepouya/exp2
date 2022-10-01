@@ -77,6 +77,11 @@ export default function Game() {
 
   const left = tabs.left.map((tab) => generate(tab, {}, context));
   const right = tabs.right.map((tab) => generate(tab, {}, context));
+  const root = left.filter((tab) => tab.path === "/")[0] ??
+    right.filter((tab) => tab.path === "/")[0] ??
+    left[0] ??
+    right[0] ?? { body: "" };
+
   return (
     <HashRouter>
       <nav id="navbar">
@@ -94,6 +99,7 @@ export default function Game() {
       </nav>
       <NuxRoot />
       <Routes>
+        {root.path !== "/" && <Route path="/" element={root.body} />}
         {[...left, ...right].map((tab) => (
           <Route path={tab.path} key={tab.path} element={tab.body} />
         ))}
