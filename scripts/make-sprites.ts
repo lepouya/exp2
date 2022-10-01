@@ -79,9 +79,11 @@ function genSVGSymbols(pack: keyof typeof PACKS) {
       // Clean up the contents
       contents = contents
         // Remove all line breaks
-        .replace(/(\r|\n)+/g, "")
+        .replace(/(\r|\n)+/gim, "")
         // Remove svg args that we define in stylesheet instead
-        .replace(/(xmlns|class|width|height|fill|stroke)(-\w+)?="[^">]*"/gi, "")
+        .replace(/(xmlns|class|fill|stroke)(-\w+)?="[^">]*"/gi, "")
+        // Remove all properties other than viewBox from svg tag
+        .replace(/<svg\b[^>]*?(viewbox="[^">]*")[^>]*>/gi, "<svg $1>")
         // tabler-icons likes to emit a box around the icons
         .replace(/d="M0 0h24v24H0z"/gi, "")
         // game-icons likes to emit a circle around the badges
@@ -102,7 +104,7 @@ function genSVGSymbols(pack: keyof typeof PACKS) {
         // Turn normal svg into a symbol definition
         .replace(/\bsvg\b/gi, "symbol")
         // Inject the id of the sprite
-        .replace(/<symbol/gi, `<symbol id="${name}"`);
+        .replace(/<symbol\b/gi, `<symbol id="${name}"`);
 
       return contents;
     });
