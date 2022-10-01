@@ -1,0 +1,40 @@
+@use "./Theme";
+
+.table-grid {
+  display: flow-root;
+  position: relative;
+  box-sizing: content-box;
+
+  padding: 0;
+  margin: auto;
+
+  table {
+    margin: 0 auto;
+    border-collapse: collapse;
+    border-spacing: 0;
+
+    width: auto;
+  }
+
+  td {
+    overflow: hidden;
+
+    padding: 0;
+    margin: 0;
+    border: 1px solid Theme.color(primary, 33%);
+
+    vertical-align: middle;
+    text-align: center;
+
+    cursor: pointer;
+    user-select: none;
+    touch-action: pan-x;
+
+    > div {
+      display: flex;
+      align-items: center;
+
+      pointer-events: none;
+    }
+  }
+}
