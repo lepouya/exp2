@@ -1,4 +1,10 @@
-import { MouseEvent, PropsWithChildren, useEffect, useState } from "react";
+import {
+  MouseEvent,
+  PropsWithChildren,
+  ReactNode,
+  useEffect,
+  useState,
+} from "react";
 
 import Arr from "../utils/arrays";
 
@@ -6,8 +12,8 @@ export type ToggleButtonProps = {
   enabled?: boolean;
   checked?: boolean;
 
-  checkedContents?: JSX.Element | string;
-  unCheckedContents?: JSX.Element | string;
+  checkedContents?: ReactNode;
+  unCheckedContents?: ReactNode;
 
   className?: string;
   style?: React.CSSProperties;

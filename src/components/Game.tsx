@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import {
   HashRouter,
   NavLink,
@@ -115,9 +115,9 @@ export type GameTab = {
 
   enabled?: boolean;
 
-  icon?: string | JSX.Element;
-  heading?: string | JSX.Element;
-  body: string | JSX.Element;
+  icon?: ReactNode;
+  heading?: ReactNode;
+  body: ReactNode;
 };
 
 const tabs: Record<"left" | "right", Generative<GameTab, [Context]>[]> = {

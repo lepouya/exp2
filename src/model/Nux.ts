@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 import generate, { Generative } from "../utils/generate";
 import Obj from "../utils/objects";
 import { Optional } from "../utils/types";
@@ -9,8 +11,8 @@ export type Nux = {
 
   enabled: boolean;
 
-  title: string | JSX.Element;
-  body: string | JSX.Element;
+  title: ReactNode;
+  body: ReactNode;
 
   prev: Optional<Nux>;
   next: Optional<Nux>;

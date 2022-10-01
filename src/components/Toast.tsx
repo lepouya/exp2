@@ -3,6 +3,7 @@
 import {
   MouseEventHandler,
   PropsWithChildren,
+  ReactNode,
   useEffect,
   useState,
 } from "react";
@@ -18,7 +19,7 @@ export type ToastProps = PropsWithChildren<{
 
   heading?: string;
   icon?: string | IconProps;
-  message?: string | JSX.Element;
+  message?: ReactNode;
 
   position?: KeysUnion<keyof typeof rows, keyof typeof groups>;
   duration?: number;

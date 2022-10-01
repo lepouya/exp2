@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 import { Resource } from "../model/Resource";
 import Arr from "../utils/arrays";
 import Format from "../utils/format";
@@ -87,7 +89,7 @@ export default function ResourceRender({
     capitalize: showCapitalized,
   });
 
-  let output: JSX.Element[] = [];
+  let output: ReactNode[] = [];
   function mkDiv(val = "", sign = "", key = "", color = false, paren = false) {
     if (
       val &&

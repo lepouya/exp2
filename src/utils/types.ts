@@ -1,7 +1,7 @@
 // Inspired by github:RonPenton/tsc-utils
 
 import Decimal from "break_eternity.js";
-import { ReactElement } from "react";
+import { ReactNode } from "react";
 
 export type Null<T> = T extends null ? T : never;
 export type Undefined<T> = T extends undefined ? T : never;
@@ -28,8 +28,7 @@ export type AtomicType =
   | JSON
   | Error
   | Element
-  | JSX.Element
-  | ReactElement;
+  | ReactNode;
 
 export type FunctionType<
   Arguments extends unknown[] = any[],
