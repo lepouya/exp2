@@ -12,7 +12,7 @@ import Format from "../utils/format";
 export default function initDerivatives(context: Context) {
   genDerivatives(context, "x", 10);
   Game.registerTab({
-    path: "/",
+    path: "/derivatives",
     placement: "left",
     order: 1,
     heading: "Derivatives",
