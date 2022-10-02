@@ -25,7 +25,7 @@ export type Resource<Context = any, TickResult = any> = {
   count: Decimal;
   maxCount?: Decimal;
   minCount?: Decimal;
-  extra: Record<string, number>;
+  extra: Record<string, any>;
 
   value: () => Decimal;
   cost: (n: DecimalSource) => ResourceCount<Context, TickResult>[];

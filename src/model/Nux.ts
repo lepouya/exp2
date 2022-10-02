@@ -32,6 +32,12 @@ export type Nux = {
   onUnmount?: () => void;
 };
 
+export type NuxState = {
+  name: string;
+  priority: number;
+  step: number;
+};
+
 export type NuxManager<Context> = {
   readonly context: Context;
   readonly currentStates: Resource<Context>;
@@ -40,16 +46,8 @@ export type NuxManager<Context> = {
   register: (...nuxes: NuxGenerator<Context>[]) => void;
   resolve: (name?: string, step?: number) => Nux | undefined;
 
-  getNuxState: (nux: string | Optional<Nux>) => {
-    name: string;
-    step: number;
-    priority: number;
-  };
-  setNuxState: (
-    nux: string | Optional<Nux>,
-    priority?: number,
-    step?: number,
-  ) => void;
+  getNuxState: (nux: string | Optional<Nux>) => NuxState;
+  setNuxState: (nux: string | Optional<Nux>, state: Optional<NuxState>) => void;
   delNuxState: (nux: string | Optional<Nux>) => void;
 
   getCurrentNux: () => Nux | undefined;
@@ -129,41 +127,28 @@ export function genNuxManager<Context>(
     },
 
     getNuxState(nux: string | Optional<Nux>) {
-      let name = typeof nux === "string" ? nux : nux?.name ?? "";
-      if (name.endsWith(":step")) {
-        name = name.slice(0, name.length - 5);
-      } else if (name.endsWith(":priority")) {
-        name = name.slice(0, name.length - 9);
-      }
+      const name = typeof nux === "string" ? nux : nux?.name ?? "";
+      const state = currentStates.extra[name];
       return {
         name,
-        step: currentStates.extra[name + ":step"] ?? 0,
-        priority: currentStates.extra[name + ":priority"] ?? Infinity,
+        step: (typeof nux === "object" && nux?.step) ?? 0,
+        priority: Infinity,
+        ...state,
       };
     },
 
-    setNuxState(nux: string | Optional<Nux>, priority?: number, step?: number) {
-      const name = nm.getNuxState(nux).name;
-      if (step == undefined && nux && typeof nux !== "string") {
-        step = nux.step ?? undefined;
-      }
-      if (name && step != undefined) {
-        currentStates.extra[name + ":step"] = step;
-      }
-      if (name && priority != undefined) {
-        currentStates.extra[name + ":priority"] = priority;
-      }
+    setNuxState(nux: string | Optional<Nux>, state: Optional<NuxState>) {
+      const curState = nm.getNuxState(nux);
+      currentStates.extra[curState.name] = { ...curState, ...state };
     },
 
     delNuxState(nux: string | Optional<Nux>) {
       const name = nm.getNuxState(nux).name;
-      delete currentStates.extra[name + ":step"];
-      delete currentStates.extra[name + ":priority"];
+      delete currentStates.extra[name];
     },
 
     getCurrentNux() {
       return Object.keys(nm.currentStates.extra)
-        .filter((extra) => extra.endsWith(":step"))
         .map(nm.getNuxState)
         .sort((a, b) => a.priority - b.priority)
         .reduce(function (showNux: Nux | undefined, curNux) {

@@ -56,10 +56,7 @@ export default function NuxRoot() {
     const state = nuxManager.getNuxState(nux);
     nuxManager.delNuxState(nux);
     if (nextNux && validNux(nextNux)) {
-      nuxManager.setNuxState(
-        nextNux,
-        nextNux.name === state.name ? state.priority : undefined,
-      );
+      nuxManager.setNuxState(nextNux, { priority: state.priority });
     }
   }
 
@@ -181,7 +178,7 @@ function registerOfflineSummary({
       dt >= settings.offlineSummaryMinSecs &&
       Object.keys(changes).length > 0
     ) {
-      nuxManager.setNuxState("OfflineSummary", 0, 0);
+      nuxManager.setNuxState("OfflineSummary", { step: 0 });
     }
   };
 }
