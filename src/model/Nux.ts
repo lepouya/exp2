@@ -131,7 +131,7 @@ export function genNuxManager<Context>(
       const state = currentStates.extra[name];
       return {
         name,
-        step: (typeof nux === "object" && nux?.step) ?? 0,
+        step: (typeof nux === "object" && nux?.step) || 0,
         priority: Infinity,
         ...state,
       };
