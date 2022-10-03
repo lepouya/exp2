@@ -1,16 +1,15 @@
 import Decimal from "break_eternity.js";
-import { useMemo } from "react";
 
 import BuyButton from "../components/BuyButton";
 import Game from "../components/Game";
-import useGameContext from "../components/GameContext";
 import Icon from "../components/Icon";
 import { Context } from "../model/Context";
 import { Resource } from "../model/Resource";
 import Format from "../utils/format";
 
 export default function initDerivatives(context: Context) {
-  genDerivatives(context, "x", 10);
+  const [main, ...rest] = genDerivatives(context, "x", 10);
+
   Game.registerTab({
     path: "/derivatives",
     placement: "left",
@@ -18,12 +17,13 @@ export default function initDerivatives(context: Context) {
     heading: "Derivatives",
     body: () => (
       <div id="x">
-        <RenderDerivatives name="x" />
+        <RenderDerivatives main={main} rest={rest} />
       </div>
     ),
   });
+
   Game.registerShortcut("x", () => {
-    buyAllDerivatives(context, "x");
+    buyAllDerivatives(context, rest);
     return true;
   });
 }
@@ -108,33 +108,18 @@ function genDerivatives(context: Context, name = "x", cnt = 0) {
   return res;
 }
 
-function RenderDerivatives(props: { name: string }) {
-  const { resources } = useGameContext();
-  const [main, ress] = useMemo(() => {
-    const prefix = `${props.name}_`;
-    const ress = Object.values(resources)
-      .filter((r) => r.name.startsWith(prefix))
-      .sort(
-        (a, b) =>
-          parseInt(a.name.substring(prefix.length)) -
-          parseInt(b.name.substring(prefix.length)),
-      );
-    const main = ress.splice(0, 1)[0];
-    return [main, ress];
-  }, [props.name]);
-
-  if (!props.name || !ress || !ress.length || !main) {
-    return null;
-  }
-
+function RenderDerivatives(props: {
+  main: Resource<Context>;
+  rest: Resource<Context>[];
+}) {
   return (
     <div className="panel">
-      <RenderTitle resource={main} rest={ress} />
-      {ress && ress[0] && <RenderHeader />}
-      {ress.map((res) => (
+      <RenderTitle resource={props.main} rest={props.rest} />
+      {props.rest[0].count.gt(0) && <RenderHeader />}
+      {props.rest.map((res) => (
         <RenderDerivative key={res.name} resource={res} />
       ))}
-      {ress[0].count.gte(10) && (
+      {props.rest[0].count.gte(10) && (
         <div className="full right">
           Buy multiples: &nbsp;
           <BuyButton.BuyAmountButtons />
@@ -146,7 +131,7 @@ function RenderDerivatives(props: { name: string }) {
 
 function RenderTitle(props: {
   resource: Resource<Context>;
-  rest?: Resource<Context>[];
+  rest: Resource<Context>[];
 }) {
   const fmt = Format.resource(props.resource);
 
@@ -171,7 +156,7 @@ function RenderTitle(props: {
         )}
       </div>
       <div className="quarter">
-        {props.rest && props.rest[0] && props.rest[0].count.gt(10) && (
+        {props.rest[0].count.gt(10) && (
           <BuyButton.BuyAllButton
             resources={props.rest}
             showNames={false}
@@ -222,7 +207,7 @@ function RenderDerivative(props: { resource: Resource<Context> }) {
           {fmt.icon && <Icon icon={fmt.icon} size="1em" />}
           {fmt.name}
         </div>
-        {props.resource.extra.factor > 1 && (
+        {props.resource.extra.factor > 0 && (
           <div className="zero three-quarters right">
             {`x${fmt.extras["Factor"]}`}
           </div>
@@ -249,16 +234,12 @@ function RenderDerivative(props: { resource: Resource<Context> }) {
   );
 }
 
-function buyAllDerivatives(context: Context, name: string) {
-  const ress = Object.fromEntries(
-    Object.values(context.resourceManager.resources)
-      .filter((r) => r.name.startsWith(name + "_") && r.name !== name + "_0")
-      .map((r) => [r.name, "base"]),
-  );
+function buyAllDerivatives(context: Context, resources: Resource<Context>[]) {
+  const ress = Object.fromEntries(resources.map((r) => [r.name, "base"]));
   context.resourceManager.purchaseAll(ress, {
     minAmount: 1,
     maxAmount: 1000,
     increments: 10,
   });
-  context.resourceManager.purchaseAll(ress, 1000);
+  context.resourceManager.purchaseAll(ress, 10);
 }
