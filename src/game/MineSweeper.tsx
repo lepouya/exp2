@@ -1,8 +1,10 @@
 import Decimal from "break_eternity.js";
 
+import BuyButton from "../components/BuyButton";
 import Game from "../components/Game";
 import useGameContext from "../components/GameContext";
 import Icon from "../components/Icon";
+import ResourceRender from "../components/ResourceRender";
 import TableGrid from "../components/TableGrid";
 import { Context } from "../model/Context";
 import { Resource } from "../model/Resource";
@@ -21,7 +23,7 @@ export default function initMineSweeper(context: Context) {
     order: 2,
     heading: "Minesweeper",
     body: () => (
-      <div id="ms">
+      <div id="minesweeper">
         <MineSweeper />
       </div>
     ),
@@ -257,24 +259,86 @@ function genMineSweeper(context: Context) {
 }
 
 function MineSweeper() {
-  const { resources } = useGameContext();
-  const board: Board = resources.minesweeper.extra.board;
+  const {
+    context,
+    resources: { rows, cols, hints, hintQuality, resets, minesweeper },
+  } = useGameContext();
+
+  let board: Board = minesweeper.extra.board;
   if (!board.state) {
-    resources.minesweeper.extra.board = calculateBoardState(board);
+    minesweeper.extra.board = board = calculateBoardState(board);
+  }
+
+  const boardSizeChanged =
+    rows.value().neq(board.rows) || cols.value().neq(board.cols);
+
+  function reset() {
+    minesweeper.extra.board = board = { ...calculateBoardState(board, 0) };
+    stateChanged(context, "board", board.state, false);
+  }
+
+  function getHint(numHints: number) {
+    numHints = genHints(
+      board,
+      numHints,
+      0,
+      8,
+      hintQuality.value().div(100).toNumber(),
+    );
+    if (numHints > 0) {
+      countActions(hints, false, numHints);
+      minesweeper.extra.board = board = { ...board };
+    }
   }
 
   return (
-    <div className="panel">
-      <div className="title-bar">Minesweeper</div>
-      <div className="full center">
-        <TableGrid
-          cells={board.cells}
-          onRender={(cell) => (
-            <Icon icon={`ti:square-number-${cell?.neighborContents.mine}`} />
-          )}
-        />
+    <>
+      <div className="panel">
+        <div className="title-bar">Minesweeper</div>
+        <div className="full center">
+          <TableGrid
+            cells={board.cells}
+            onRender={(cell) => (
+              <Icon icon={`ti:square-number-${cell?.neighborContents.mine}`} />
+            )}
+          />
+        </div>
       </div>
-    </div>
+      <div className="game-controls panel">
+        <div className="half">
+          <button className="buy-button" onClick={reset} id="button-reset">
+            <ResourceRender
+              resource={resets}
+              override={{ count: Decimal.dOne }}
+              showValue={false}
+              showChrome={true}
+              infix=""
+              suffix="the Game"
+            />
+          </button>
+        </div>
+        <div className="half">
+          <BuyButton
+            resource={hints}
+            overrideCount={0}
+            // overrideMaxCount={
+            //   board.rows * board.cols -
+            //   board.numMines -
+            //   board.cellCounts.revealed
+            // }
+            onPurchase={(_, numHints) =>
+              getHint(Decimal.fromValue(numHints).toNumber())
+            }
+          />
+        </div>
+        {boardSizeChanged && (
+          <div className="left full" id="reset-info">
+            On reset, game board will change to size to
+            {` ${rows.value()}x${cols.value()}`}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -496,7 +560,7 @@ function genBoard(
   return board;
 }
 
-export function genHints(
+function genHints(
   board: Board,
   numHints: number,
   minHintLevel: number = 0,
@@ -525,4 +589,75 @@ export function genHints(
   });
 
   return hints.length;
+}
+
+function countActions(resource: Resource, automatic: boolean, count = 1) {
+  if (automatic) {
+    const auto = resource.manager.resources.automation;
+    auto.add(count);
+    auto.extra.total += count;
+
+    if (resource.extra.auto != null) {
+      resource.extra.auto += count;
+    }
+  } else if (resource.extra.manual != null) {
+    resource.extra.manual += count;
+  }
+
+  if (resource.extra.total != null) {
+    resource.extra.total += count;
+  }
+
+  if (resource.extra.streak != null) {
+    resource.extra.streak += count;
+
+    if (
+      resource.extra.longestStreak != null &&
+      resource.extra.streak > resource.extra.longestStreak
+    ) {
+      resource.extra.longestStreak = resource.extra.streak;
+    }
+  }
+}
+
+function stateChanged(
+  context: Context,
+  target: "board" | "cell",
+  state: string,
+  automatic: boolean,
+  count = 1,
+) {
+  const targetStates: Record<string, string> = {
+    "board:active": "resets",
+    "board:lost": "losses",
+    "board:won": "wins",
+    "cell:blown": "explosions",
+    "cell:hinted": "hints",
+    "cell:flagged": "flags",
+    "cell:revealed": "cells",
+  };
+
+  const resources = context.resourceManager.resources;
+  const res = resources[targetStates[target + ":" + state] ?? ""];
+  if (res) {
+    res.add(count);
+    countActions(res, automatic, count);
+  }
+
+  switch (target + ":" + state) {
+    case "cell:unflagged":
+      resources.flags.add(-count);
+      resources.flags.extra.unflags += count;
+      break;
+    case "cell:unrevealed":
+      resources.cells.add(-count);
+      resources.cells.extra.hidden += count;
+      break;
+    case "board:won":
+      resources.losses.extra.streak = 0;
+      break;
+    case "board:lost":
+      resources.wins.extra.streak = 0;
+      break;
+  }
 }
