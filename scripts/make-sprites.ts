@@ -16,7 +16,7 @@ const PACKS = {
       "(https://github.com/tabler/tabler-icons/blob/master/LICENSE) " +
       "for full licensing and credits.",
     downloadLink:
-      "https://github.com/tabler/tabler-icons/releases/download/v1.100.0/tabler-icons-1.100.0.zip",
+      "https://github.com/tabler/tabler-icons/releases/download/v2.2.0/tabler-icons-2.2.0.zip",
   },
   gi: {
     path: "game-icons",
