@@ -16,7 +16,7 @@
   border-radius: 1ex;
   box-sizing: border-box;
 
-  div {
+  > div {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;

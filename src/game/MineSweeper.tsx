@@ -311,7 +311,7 @@ function MineSweeper() {
               resource={resets}
               override={{ count: Decimal.dOne }}
               showValue={false}
-              showChrome={true}
+              showChrome={false}
               infix=""
               suffix="the Game"
             />
@@ -355,8 +355,8 @@ type Cell = {
   state: CellState;
   locked?: boolean;
 
-  neighborContents: Expansion<CellContents, number>;
   neighborStates: Expansion<CellState, number>;
+  neighborContents: Expansion<CellContents, number>;
 };
 
 type Board = {
@@ -364,12 +364,31 @@ type Board = {
   cols: number;
 
   cells: Cell[][];
-  numMines: number;
 
   state: BoardState;
-  cellCounts: Expansion<CellState, number>;
+  cellStates: Expansion<CellState, number>;
+  cellContents: Expansion<CellContents, number>;
 
   hadUserAction: boolean;
+};
+
+const emptyBoard: Board = {
+  rows: 0,
+  cols: 0,
+  cells: [],
+  state: "inactive",
+  cellStates: {
+    hidden: 0,
+    hinted: 0,
+    flagged: 0,
+    revealed: 0,
+    blown: 0,
+  },
+  cellContents: {
+    clear: 0,
+    mine: 0,
+  },
+  hadUserAction: false,
 };
 
 const emptyCell: Cell = {
@@ -377,33 +396,8 @@ const emptyCell: Cell = {
   col: 0,
   contents: "clear",
   state: "hidden",
-  neighborContents: {
-    clear: 0,
-    mine: 0,
-  },
-  neighborStates: {
-    hidden: 0,
-    hinted: 0,
-    flagged: 0,
-    revealed: 0,
-    blown: 0,
-  },
-};
-
-const emptyBoard: Board = {
-  rows: 0,
-  cols: 0,
-  cells: [],
-  numMines: 0,
-  state: "inactive",
-  cellCounts: {
-    hidden: 0,
-    hinted: 0,
-    flagged: 0,
-    revealed: 0,
-    blown: 0,
-  },
-  hadUserAction: false,
+  neighborStates: { ...emptyBoard.cellStates },
+  neighborContents: { ...emptyBoard.cellContents },
 };
 
 function actOnCell(cell: Cell, action: CellAction): Cell {
@@ -455,9 +449,9 @@ function makeClearBoard(rows: number, cols: number): Board {
     rows,
     cols,
     cells,
-    numMines: 0,
     state: "active",
-    cellCounts: { ...emptyBoard.cellCounts, hidden: rows * cols },
+    cellStates: { ...emptyBoard.cellStates, hidden: rows * cols },
+    cellContents: { ...emptyBoard.cellContents, clear: rows * cols },
     hadUserAction: false,
   };
 }
@@ -472,7 +466,7 @@ function populateRandomMines(
   let numMines = clamp(
     Math.floor(minMines + Math.random() * (1 + maxMines - minMines)),
     0,
-    board.cellCounts.hidden - board.numMines - 1,
+    board.cellStates.hidden - board.cellContents.mine - 1,
   );
 
   while (numMines > 0) {
@@ -484,7 +478,7 @@ function populateRandomMines(
       board.cells[r][c].state === "hidden"
     ) {
       board.cells[r][c].contents = "mine";
-      board.numMines++;
+      board.cellContents.mine++;
       numMines--;
     }
   }
@@ -493,20 +487,20 @@ function populateRandomMines(
 }
 
 function calculateBoardState(board: Board, maxErrors = 1): Board {
-  board.cellCounts = { ...emptyBoard.cellCounts };
-  board.numMines = 0;
+  board.cellStates = { ...emptyBoard.cellStates };
+  board.cellContents = { ...emptyBoard.cellContents };
   board.cells.forEach((cells) =>
     cells.forEach((cell) => {
-      cell.neighborContents = { ...emptyCell.neighborContents };
       cell.neighborStates = { ...emptyCell.neighborStates };
+      cell.neighborContents = { ...emptyCell.neighborContents };
     }),
   );
 
   for (let r = 0; r < board.rows; r++) {
     for (let c = 0; c < board.cols; c++) {
       const cell = board.cells[r][c];
-      board.numMines += cell.contents === "mine" ? 1 : 0;
-      board.cellCounts[cell.state]++;
+      board.cellStates[cell.state]++;
+      board.cellContents[cell.contents]++;
       cell.row = r;
       cell.col = c;
       cell.locked = !!cell.locked || undefined;
@@ -524,21 +518,23 @@ function calculateBoardState(board: Board, maxErrors = 1): Board {
     }
   }
 
-  if (board.state === "lost" || board.cellCounts["blown"] >= maxErrors) {
+  if (board.state === "lost" || board.cellStates["blown"] >= maxErrors) {
     board.state = "lost";
     board.cells.forEach((cells) =>
       cells.forEach((cell) => {
-        board.cellCounts[cell.state]--;
+        board.cellStates[cell.state]--;
         actOnCell(cell, "reveal");
-        board.cellCounts[cell.state]++;
+        board.cellStates[cell.state]++;
       }),
     );
   } else if (board.cols * board.rows === 0) {
     board.state = "inactive";
   } else if (
-    board.cellCounts["blown"] + board.cellCounts["flagged"] >= board.numMines &&
-    board.cellCounts["hidden"] === 0 &&
-    board.cellCounts["revealed"] >= board.cols * board.rows - board.numMines
+    board.cellStates["blown"] + board.cellStates["flagged"] >=
+      board.cellContents.mine &&
+    board.cellStates["hidden"] === 0 &&
+    board.cellStates["revealed"] >=
+      board.cols * board.rows - board.cellContents.mine
   ) {
     board.state = "won";
   } else {
@@ -583,9 +579,9 @@ function genHints(
   );
 
   hints.forEach((hint) => {
+    board.cellStates[hint.state]--;
     actOnCell(hint, "hint");
-    board.cellCounts.hinted++;
-    board.cellCounts.hidden--;
+    board.cellStates[hint.state]++;
   });
 
   return hints.length;
