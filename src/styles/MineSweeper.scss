@@ -1,0 +1,86 @@
+@use "./Theme";
+
+.mine-sweeper {
+  .board {
+    &-inactive {
+      @include Theme.background($primary: 15%, $secondary: 100%);
+    }
+
+    &-active {
+      @include Theme.background($neutral: 15%, $secondary: 100%);
+    }
+
+    &-won {
+      @include Theme.background($positive: 15%, $secondary: 100%);
+    }
+
+    &-lost {
+      @include Theme.background($negative: 15%, $secondary: 100%);
+    }
+  }
+
+  .cell {
+    &-hidden {
+      @include Theme.background($primary: 13%, $secondary: 100%);
+    }
+
+    &-revealed {
+      @include Theme.background($primary: 7%, $secondary: 100%);
+    }
+
+    &-hinted {
+      @include Theme.background($positive: 20%, $secondary: 100%);
+    }
+
+    &-flagged {
+      @include Theme.background($primary: 20%, $secondary: 100%);
+    }
+
+    &-blown {
+      @include Theme.background($primary: 40%, $secondary: 100%);
+    }
+  }
+
+  .icon {
+    display: inline-block;
+    margin: 0 auto;
+    width: 80%;
+    height: 80%;
+
+    &-hidden {
+      color: transparent;
+    }
+
+    &-revealed {
+      color: Theme.color(positive);
+    }
+
+    &-hinted {
+      color: Theme.color(positive, 50%);
+    }
+
+    &-flagged {
+      color: Theme.color(neutral);
+    }
+
+    &-blown {
+      color: Theme.color(negative);
+    }
+
+    &-inactive {
+      color: Theme.color(primary, 50%);
+    }
+
+    &-active {
+      color: Theme.color(primary);
+    }
+
+    &-won {
+      color: Theme.color(positive);
+    }
+
+    &-lost {
+      color: Theme.color(negative);
+    }
+  }
+}

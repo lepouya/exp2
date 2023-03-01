@@ -297,10 +297,10 @@ function MineSweeper() {
         <div className="title-bar">Minesweeper</div>
         <div className="full center">
           <TableGrid
+            className="mine-sweeper"
             cells={board.cells}
-            onRender={(cell) => (
-              <Icon icon={`ti:square-number-${cell?.neighborContents.mine}`} />
-            )}
+            cellClass={(cell) => `cell-${cell.state}`}
+            onRender={(cell) => <CellIcon cell={cell} />}
           />
         </div>
       </div>
@@ -340,6 +340,33 @@ function MineSweeper() {
       </div>
     </>
   );
+}
+
+const _cellIcons = {
+  hidden: "ti:question-mark",
+  hinted: "ti:eye",
+  flagged: "ti:flag-2",
+  blown: "ti:alert-triangle",
+  revealed: [
+    "ti:square-dot",
+    "ti:square-number-1",
+    "ti:square-number-2",
+    "ti:square-number-3",
+    "ti:square-number-4",
+    "ti:square-number-5",
+    "ti:square-number-6",
+    "ti:square-number-7",
+    "ti:square-number-8",
+  ],
+};
+
+function CellIcon({ cell }: { cell: Cell }) {
+  let icon = _cellIcons[cell.state];
+  if (icon instanceof Array) {
+    icon = icon[cell.neighborContents.mine];
+  }
+
+  return <Icon icon={icon} className={`icon-${cell.state}`} />;
 }
 
 type CellContents = "clear" | "mine";
@@ -616,6 +643,16 @@ function countActions(resource: Resource, automatic: boolean, count = 1) {
   }
 }
 
+const _targetStates: Record<string, string> = {
+  "board:active": "resets",
+  "board:lost": "losses",
+  "board:won": "wins",
+  "cell:blown": "explosions",
+  "cell:hinted": "hints",
+  "cell:flagged": "flags",
+  "cell:revealed": "cells",
+};
+
 function stateChanged(
   context: Context,
   target: "board" | "cell",
@@ -623,18 +660,8 @@ function stateChanged(
   automatic: boolean,
   count = 1,
 ) {
-  const targetStates: Record<string, string> = {
-    "board:active": "resets",
-    "board:lost": "losses",
-    "board:won": "wins",
-    "cell:blown": "explosions",
-    "cell:hinted": "hints",
-    "cell:flagged": "flags",
-    "cell:revealed": "cells",
-  };
-
   const resources = context.resourceManager.resources;
-  const res = resources[targetStates[target + ":" + state] ?? ""];
+  const res = resources[_targetStates[target + ":" + state] ?? ""];
   if (res) {
     res.add(count);
     countActions(res, automatic, count);

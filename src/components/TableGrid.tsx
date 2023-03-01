@@ -21,7 +21,7 @@ type TableGridProps<Cell> = {
   maxCellHeight?: string | number;
 
   onClick?: (event: MouseEvent, cell: Cell, row: number, col: number) => void;
-  onRender?: (cell?: Cell, row?: number, col?: number) => ReactNode;
+  onRender?: (cell: Cell, row: number, col: number) => ReactNode;
 
   className?: string;
   style?: CSSProperties;
