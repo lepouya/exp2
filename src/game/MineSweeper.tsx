@@ -1,15 +1,18 @@
 import Decimal from "break_eternity.js";
+import { MouseEvent, useEffect, useState } from "react";
 
 import BuyButton from "../components/BuyButton";
 import Game from "../components/Game";
 import useGameContext from "../components/GameContext";
 import Icon from "../components/Icon";
+import ProgressCircle from "../components/ProgressCircle";
 import ResourceRender from "../components/ResourceRender";
 import TableGrid from "../components/TableGrid";
 import { Context } from "../model/Context";
 import { Resource } from "../model/Resource";
 import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
+import message from "../utils/message";
 import { setSaveProperties } from "../utils/store";
 import tickTimer from "../utils/tickTimer";
 import { Expansion } from "../utils/types";
@@ -261,7 +264,7 @@ function genMineSweeper(context: Context) {
 function MineSweeper() {
   const {
     context,
-    resources: { rows, cols, hints, hintQuality, resets, minesweeper },
+    resources: { rows, cols, hints, resets, minesweeper },
   } = useGameContext();
 
   let board: Board = minesweeper.extra.board;
@@ -278,13 +281,7 @@ function MineSweeper() {
   }
 
   function getHint(numHints: number) {
-    numHints = genHints(
-      board,
-      numHints,
-      0,
-      8,
-      hintQuality.value().div(100).toNumber(),
-    );
+    numHints = genHints(board, numHints, 0, 8, F.hintQuality(context));
     if (numHints > 0) {
       countActions(hints, false, numHints);
       minesweeper.extra.board = board = { ...board };
@@ -301,7 +298,9 @@ function MineSweeper() {
             cells={board.cells}
             cellClass={(cell) => `cell-${cell.state}`}
             onRender={(cell) => <CellIcon cell={cell} />}
-          />
+          >
+            <ResetBox />
+          </TableGrid>
         </div>
       </div>
       <div className="game-controls panel">
@@ -367,6 +366,89 @@ function CellIcon({ cell }: { cell: Cell }) {
   }
 
   return <Icon icon={icon} className={`icon-${cell.state}`} />;
+}
+
+function ResetBox() {
+  const {
+    context,
+    resources: { resetSpeed, minesweeper },
+  } = useGameContext();
+  const board: Board = minesweeper.extra.board;
+  const [title, setTitle] = useState<string>(board.state);
+  const [isResetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+  const [messageTime, setMessageTime] = useState(0);
+
+  useEffect(() => {
+    setTitle(message(board.state));
+  }, [board, board.state]);
+
+  if (board.rows === 0 || board.cols === 0 || board.state === "inactive") {
+    boardReset(context, true);
+    return null;
+  } else if (board.state === "active") {
+    return null;
+  }
+
+  const waitTime = F.resetTime(context);
+  const remainingTime = resetSpeed.extra.remainingTime;
+
+  if (!isResetting && remainingTime > 0) {
+    setResetting(true);
+    setMessageTime(0);
+  } else if (isResetting && remainingTime < 0.001) {
+    setResetting(false);
+    boardReset(context, false);
+  }
+
+  if (
+    isResetting &&
+    (!resetMessage || waitTime - remainingTime >= messageTime)
+  ) {
+    setResetMessage(message("resetting"));
+    setMessageTime(messageTime + 2);
+  }
+
+  function startReset(event?: MouseEvent) {
+    event?.preventDefault();
+
+    if (!isResetting) {
+      if (waitTime < 0.001) {
+        boardReset(context, false);
+      } else if (resetSpeed.extra.remainingTime < 0.001) {
+        resetSpeed.extra.remainingTime = waitTime;
+      }
+    }
+  }
+
+  return (
+    <div className="reset-box">
+      <div className={`panel shadow board-state-${board.state}`}>
+        <div className="title-bar">{title}</div>
+        <div className="full center">Game over!</div>
+        <div className="full center">
+          You may reset the board to receive a brand new game to play:
+        </div>
+        <ProgressCircle
+          value={isResetting ? (waitTime - remainingTime) / waitTime : 0}
+          showPercent={isResetting}
+          width="100%"
+          height="50%"
+        >
+          {!isResetting && (
+            <input
+              type="button"
+              value="Reset!"
+              disabled={isResetting}
+              onClick={startReset}
+              id="button-reset"
+            />
+          )}
+          {isResetting && <span>{resetMessage}...</span>}
+        </ProgressCircle>
+      </div>
+    </div>
+  );
 }
 
 type CellContents = "clear" | "mine";
@@ -684,3 +766,125 @@ function stateChanged(
       break;
   }
 }
+
+function boardReset(context: Context, automatic = false) {
+  const resources = context.resourceManager.resources;
+  let board: Board = resources.minesweeper.extra.board;
+  const firstGame =
+    automatic &&
+    board.state === "inactive" &&
+    resources.resets.count.eq(0) &&
+    resources.resets.extra.total === 0;
+
+  // First game always has 1 mine
+  const m = firstGame ? 1 : F.numMines(context);
+
+  // context.settings.tapMode = "reveal";
+  resources.minesweeper.extra.board = board = genBoard(
+    resources.rows.value().toNumber(),
+    resources.cols.value().toNumber(),
+    Math.floor(m),
+    Math.ceil(m),
+  );
+
+  if (firstGame) {
+    // Free hint on first game!
+    if (genHints(board, 1, 0, 0, 1) === 0) {
+      genHints(board, 1, 0, 1, 1);
+    }
+    stateChanged(context, "board", "active", true);
+    stateChanged(context, "cell", "hinted", true);
+  }
+
+  // Auto click on start
+  // if (
+  //   resources.autoClickBoard.count.gt(0) &&
+  //   (resources.autoClickBoard.unlocked ?? true) &&
+  //   !resources.autoClickBoard.disabled
+  // ) {
+  //   for (let i = resources.autoClickBoard.value().toNumber(); i > 0; i--) {
+  //     const r = Math.floor(Math.random() * resources.rows.value().toNumber());
+  //     const c = Math.floor(Math.random() * resources.cols.value().toNumber());
+  //     const cell = board.cells[r][c];
+  //     if (cell.state === "hidden" && board.state === "active") {
+  //       actOnCell(cell, "reveal");
+  //       stateChanged(context, "cell", cell.state, true);
+  //     }
+  //   }
+  // }
+
+  return true;
+}
+
+const F = {
+  boardProgress: ({
+    resourceManager: {
+      resources: {
+        minesweeper: {
+          extra: { board },
+        },
+      },
+    },
+  }: Context): number => {
+    return (
+      (100 * (board.cellCounts.revealed + board.cellCounts.flagged)) /
+      (board.rows * board.cols)
+    );
+  },
+
+  numMines: ({
+    resourceManager: {
+      resources: { rows, cols, difficulty },
+    },
+  }: Context) => {
+    return (
+      rows.value().toNumber() *
+      cols.value().toNumber() *
+      (difficulty.value().toNumber() / 100)
+    );
+  },
+
+  hintQuality: ({
+    resourceManager: {
+      resources: { hintQuality },
+    },
+  }: Context) => {
+    return hintQuality.value().toNumber() / 100;
+  },
+
+  remainingHints: ({
+    resourceManager: {
+      resources: {
+        minesweeper: {
+          extra: { board },
+        },
+      },
+    },
+  }: Context) => {
+    return board.rows * board.cols - board.numMines - board.cellCounts.revealed;
+  },
+
+  resetTime: ({
+    resourceManager: {
+      resources: { rows, cols, difficulty, resetSpeed },
+    },
+  }: Context) => {
+    return (
+      (1 - resetSpeed.value().toNumber() / 100) *
+      Math.sqrt(
+        rows.value().toNumber() *
+          cols.value().toNumber() *
+          (difficulty.value().toNumber() / 100) *
+          10,
+      )
+    );
+  },
+
+  difficultyScore: ({
+    resourceManager: {
+      resources: { difficulty },
+    },
+  }: Context) => {
+    return (difficulty.value().toNumber() + 10) / 25;
+  },
+};
