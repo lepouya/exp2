@@ -38,7 +38,9 @@ function genMineSweeper(context: Context) {
     {
       name: "minesweeper",
       extra: {
-        board: genBoard(10, 10, 10), // { ...emptyBoard },
+        board: { ...emptyBoard },
+        tapMode: "reveal",
+        maxErrors: 1,
       },
     },
     {
@@ -298,6 +300,7 @@ function MineSweeper() {
             cells={board.cells}
             cellClass={(cell) => `cell-${cell.state}`}
             onRender={(cell) => <CellIcon cell={cell} />}
+            onClick={(event, cell) => handleCellClick(event, cell, context)}
           >
             <ResetBox />
           </TableGrid>
@@ -767,6 +770,46 @@ function stateChanged(
   }
 }
 
+function revealNeighbors(
+  context: Context,
+  board: Board,
+  cell: Cell,
+  count: number,
+  automatic: boolean,
+): number {
+  const res = context.resourceManager.resources.revealNeighbors;
+
+  const choices = [];
+  for (let dr = cell.row - 1; dr <= cell.row + 1; dr++) {
+    for (let dc = cell.col - 1; dc <= cell.col + 1; dc++) {
+      if ((board.cells[dr] ?? [])[dc]?.state === "hidden") {
+        choices.push(board.cells[dr][dc]);
+      }
+    }
+  }
+
+  Arr.shuffle(choices).splice(count);
+  for (const cell of choices) {
+    actOnCell(cell, "reveal");
+    stateChanged(context, "cell", cell.state, true);
+
+    if (cell.state === "revealed" && cell.contents === "clear") {
+      res.extra.reveals++;
+    } else if (cell.state === "blown" || cell.contents === "mine") {
+      res.extra.explosions++;
+    } else {
+      res.extra.useless++;
+    }
+  }
+
+  countActions(res, automatic);
+  if (choices.length === 0) {
+    res.extra.useless++;
+  }
+
+  return choices.length;
+}
+
 function boardReset(context: Context, automatic = false) {
   const resources = context.resourceManager.resources;
   let board: Board = resources.minesweeper.extra.board;
@@ -779,7 +822,7 @@ function boardReset(context: Context, automatic = false) {
   // First game always has 1 mine
   const m = firstGame ? 1 : F.numMines(context);
 
-  // context.settings.tapMode = "reveal";
+  resources.minesweeper.extra.tapMode = "reveal";
   resources.minesweeper.extra.board = board = genBoard(
     resources.rows.value().toNumber(),
     resources.cols.value().toNumber(),
@@ -814,6 +857,86 @@ function boardReset(context: Context, automatic = false) {
   // }
 
   return true;
+}
+
+function handleCellClick(event: MouseEvent, cell: Cell, context: Context) {
+  event.preventDefault();
+  const resources = context.resourceManager.resources;
+  let board: Board = resources.minesweeper.extra.board;
+
+  const clicks = resources.clicks;
+  clicks.count = clicks.count.add(1);
+  if (cell.locked) {
+    clicks.extra.useless++;
+    return;
+  }
+
+  const prevState = cell.state;
+
+  // To flag: Right click
+  //  On devices that don't have right click, hold any of the modifier keys
+  //  and left click
+  if (
+    (event.button === 2 && event.type === "contextmenu") ||
+    (event.button === 0 &&
+      event.type === "click" &&
+      (resources.minesweeper.extra.tapMode === "flag" ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey))
+  ) {
+    clicks.extra.right++;
+    actOnCell(cell, "flag");
+  }
+  // To reveal: Left click
+  else if (
+    event.button === 0 &&
+    event.type === "click" &&
+    resources.minesweeper.extra.tapMode === "reveal"
+  ) {
+    clicks.extra.left++;
+    actOnCell(cell, "reveal");
+  }
+  // To auto-fill: Double click
+  else if (event.button === 0 && event.type === "dblclick") {
+    clicks.extra.double++;
+    clicks.extra.useless--;
+    clicks.extra.left--;
+
+    if (!(resources.revealNeighbors.unlocked ?? true)) {
+      clicks.extra.useless++;
+    } else {
+      revealNeighbors(
+        context,
+        board,
+        cell,
+        resources.revealNeighbors.count.toNumber(),
+        false,
+      );
+    }
+  }
+
+  if (prevState === cell.state && event.type !== "dblclick") {
+    clicks.extra.useless++;
+  } else {
+    if (prevState !== cell.state) {
+      stateChanged(context, "cell", cell.state, false);
+      if (cell.state === "hidden") {
+        stateChanged(context, "cell", "un" + prevState, false);
+      }
+    }
+
+    board.hadUserAction = true;
+    if (board.state === "active") {
+      resources.minesweeper.extra.board = board = {
+        ...calculateBoardState(board, resources.minesweeper.extra.maxErrors),
+      };
+      if (board.state !== "active") {
+        stateChanged(context, "board", board.state, false);
+      }
+    }
+  }
 }
 
 const F = {
