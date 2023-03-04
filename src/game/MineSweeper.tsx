@@ -299,10 +299,7 @@ function ResourceBar() {
     context,
     resources: { wins, cells, automation, minesweeper },
   } = useGameContext();
-  let board: Board = minesweeper.extra.board;
-  if (!board.state) {
-    minesweeper.extra.board = board = calculateBoardState(board);
-  }
+  const board: Board = minesweeper.extra.board;
 
   return (
     <div className={`panel board-${board.state}`} id="resource-bar">
@@ -349,8 +346,8 @@ function ResourceBar() {
       <ResourceRender
         override={{
           name: "Mines",
-          count: Decimal.fromValue(board.cellStates.flagged),
-          maxCount: Decimal.fromValue(board.cellContents.mine),
+          count: Decimal.fromValue(board.cellStates?.flagged),
+          maxCount: Decimal.fromValue(board.cellContents?.mine),
         }}
         showMaxValue={true}
         showChrome={true}
@@ -476,11 +473,15 @@ function ResetBox() {
     context,
     resources: { resetSpeed, minesweeper },
   } = useGameContext();
-  const board: Board = minesweeper.extra.board;
+  let board: Board = minesweeper.extra.board;
   const [title, setTitle] = useState<string>(board.state);
   const [isResetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
   const [messageTime, setMessageTime] = useState(0);
+
+  if (!board.state) {
+    minesweeper.extra.board = board = calculateBoardState(board);
+  }
 
   useEffect(() => {
     setTitle(message(board.state));
@@ -1130,13 +1131,13 @@ function boardReset(context: Context, automatic = false) {
     Math.floor(m),
     Math.ceil(m),
   );
+  stateChanged(context, "board", board.state, automatic);
 
   if (firstGame) {
     // Free hint on first game!
     if (genHints(board, 1, 0, 0, 1) === 0) {
       genHints(board, 1, 0, 1, 1);
     }
-    stateChanged(context, "board", "active", true);
     stateChanged(context, "cell", "hinted", true);
   }
 
@@ -1251,7 +1252,7 @@ const F = {
     },
   }: Context): number => {
     return (
-      (100 * (board.cellStates.revealed + board.cellStates.flagged)) /
+      (100 * (board.cellStates?.revealed + board.cellStates?.flagged)) /
       (board.rows * board.cols)
     );
   },
@@ -1285,7 +1286,9 @@ const F = {
       },
     },
   }: Context) => {
-    return board.rows * board.cols - board.numMines - board.cellStates.revealed;
+    return (
+      board.rows * board.cols - board.numMines - board.cellStates?.revealed
+    );
   },
 
   resetTime: ({
