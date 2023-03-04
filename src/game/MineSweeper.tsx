@@ -30,6 +30,7 @@ export default function initMineSweeper(context: Context) {
         <ResourceBar />
         <MineSweeper />
         <ModeControls />
+        <Upgrades />
       </div>
     ),
   });
@@ -190,6 +191,9 @@ function genMineSweeper(context: Context) {
         return [
           { resource: "cells", count: Decimal.pow(2, Decimal.add(n, 1)) },
         ];
+      },
+      unlockCost() {
+        return [{ resource: "wins", count: 1 }];
       },
       value(this: Resource) {
         return this.count.floor();
@@ -545,6 +549,207 @@ function ResetBox() {
           )}
           {isResetting && <span>{resetMessage}...</span>}
         </ProgressCircle>
+      </div>
+    </div>
+  );
+}
+
+function Upgrades() {
+  const {
+    context,
+    resources: {
+      rows,
+      cols,
+      difficulty,
+      hintQuality,
+      hintsCount,
+      resetSpeed,
+      revealNeighbors,
+    },
+  } = useGameContext();
+
+  return (
+    <div id="upgrades">
+      <div className="game-controls panel" id="game-upgrades">
+        <div className="title-bar">Game Upgrades</div>
+
+        <div className="quarter">Game Width:</div>
+        <div className="quarter">
+          <ResourceRender
+            resource={cols}
+            showChrome={true}
+            infix=""
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton resource={cols} prefix="Expand" />
+        </div>
+        <div className="half"></div>
+        <div className="right half">
+          {cols.count.gt(3) && (
+            <BuyButton
+              resource={cols}
+              prefix="Shrink"
+              mode="sell"
+              costFactor={-1}
+            />
+          )}
+        </div>
+
+        <div className="quarter">Game Height:</div>
+        <div className="quarter">
+          <ResourceRender
+            resource={rows}
+            showChrome={true}
+            infix=""
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton resource={rows} prefix="Expand" />
+        </div>
+        <div className="half"></div>
+        <div className="right half">
+          {rows.count.gt(3) && (
+            <BuyButton
+              resource={rows}
+              prefix="Shrink"
+              mode="sell"
+              costFactor={-1}
+            />
+          )}
+        </div>
+
+        <div className="quarter">Game Difficulty:</div>
+        <div className="quarter">
+          <ResourceRender
+            resource={difficulty}
+            showChrome={true}
+            showName={false}
+            infix=""
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton resource={difficulty} prefix="Increase" />
+        </div>
+        <div className="quarter">
+          <span className="computed">Score Multiplier:</span>
+        </div>
+        <div className="quarter">
+          <ResourceRender
+            override={{
+              count: Decimal.fromValue(F.difficultyScore(context)),
+              display: "percentage",
+            }}
+            showChrome={true}
+            className="computed"
+          />
+        </div>
+        <div className="right half">
+          {difficulty.count.gt(1) && (
+            <BuyButton
+              resource={difficulty}
+              prefix="Decrease"
+              mode="sell"
+              costFactor={-1}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="game-controls panel">
+        <div className="title-bar">Quality Upgrades</div>
+
+        <div className="quarter">Reset Speed:</div>
+        <div className="quarter">
+          <ResourceRender
+            resource={resetSpeed}
+            showChrome={true}
+            showName={false}
+            infix=""
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={resetSpeed}
+            prefix={
+              resetSpeed.count < (resetSpeed.maxCount ?? Infinity)
+                ? "Speed up"
+                : "Max Speed!"
+            }
+          />
+        </div>
+
+        <hr className="separator" />
+
+        <div className="quarter">Hint Quality:</div>
+        <div className="quarter">
+          <ResourceRender
+            resource={hintQuality}
+            showChrome={true}
+            showName={false}
+            infix=""
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton resource={hintQuality} prefix="Improve" />
+        </div>
+
+        <div className="quarter">Number of hints on purchase:</div>
+        <div className="quarter">
+          <ResourceRender
+            resource={hintsCount}
+            showChrome={true}
+            infix=""
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={hintsCount}
+            prefix={
+              hintsCount.count < (hintsCount.maxCount ?? Infinity)
+                ? "Improve"
+                : "Max Quality!"
+            }
+          />
+        </div>
+
+        <hr className="separator" />
+
+        <div className="half">
+          <ResourceRender
+            resource={revealNeighbors}
+            showChrome={true}
+            infix=""
+            placeholder="Nothing happens"
+            suffix="on double-tap"
+            className="value-first"
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={revealNeighbors}
+            allowUnlocking={true}
+            prefix={
+              !revealNeighbors.unlocked
+                ? "Unlock"
+                : revealNeighbors.count.lt(revealNeighbors.maxCount ?? Infinity)
+                ? "Additional"
+                : "Maxed out!"
+            }
+          />
+        </div>
+        <div className="full computed">
+          Reveals random (hidden) neighbors of the square being tapped on.
+          <br />
+          CAUTION: it might trigger a mine if they have not been properly
+          flagged!
+        </div>
       </div>
     </div>
   );
@@ -1046,7 +1251,7 @@ const F = {
     },
   }: Context): number => {
     return (
-      (board.cellStates.revealed + board.cellStates.flagged) /
+      (100 * (board.cellStates.revealed + board.cellStates.flagged)) /
       (board.rows * board.cols)
     );
   },

@@ -245,7 +245,7 @@ Format.resource = function <Context, TickResult>(
     if (display === "time") {
       value = Format.time(count.toNumber() * 1000, options);
     } else if (display === "percentage") {
-      value = Format(count.mul(100), options) + "%";
+      value = Format(count, options) + "%";
     } else {
       value = Format(count, options);
     }
