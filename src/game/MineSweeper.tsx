@@ -27,7 +27,9 @@ export default function initMineSweeper(context: Context) {
     heading: "Minesweeper",
     body: () => (
       <div id="minesweeper">
+        <ResourceBar />
         <MineSweeper />
+        <ModeControls />
       </div>
     ),
   });
@@ -266,12 +268,106 @@ function genMineSweeper(context: Context) {
 function MineSweeper() {
   const {
     context,
-    resources: { rows, cols, hints, resets, minesweeper },
+    resources: { minesweeper },
   } = useGameContext();
+  const board: Board = minesweeper.extra.board;
 
+  return (
+    <div className="panel">
+      <div className="title-bar">Minesweeper</div>
+      <div className="full center">
+        <TableGrid
+          className="mine-sweeper"
+          cells={board.cells}
+          cellClass={(cell) => `cell-${cell.state}`}
+          onRender={(cell) => <CellIcon cell={cell} />}
+          onClick={(event, cell) => handleCellClick(event, cell, context)}
+        >
+          <ResetBox />
+        </TableGrid>
+      </div>
+    </div>
+  );
+}
+
+function ResourceBar() {
+  const {
+    context,
+    resources: { wins, cells, automation, minesweeper },
+  } = useGameContext();
   let board: Board = minesweeper.extra.board;
   if (!board.state) {
     minesweeper.extra.board = board = calculateBoardState(board);
+  }
+
+  return (
+    <div className={`panel board-${board.state}`} id="resource-bar">
+      <ResourceRender
+        resource={wins}
+        precision={0}
+        showRate={true}
+        showZeroRates={true}
+        showRatePercentages={false}
+        showChrome={true}
+      />
+      {automation.extra.total >= 5 && (
+        <ResourceRender
+          resource={automation}
+          precision={0}
+          showRate={true}
+          showZeroRates={true}
+          showRatePercentages={false}
+          showChrome={true}
+        />
+      )}
+      <ResourceRender
+        resource={cells}
+        precision={0}
+        showRate={true}
+        showZeroRates={true}
+        showRatePercentages={false}
+        showChrome={true}
+      />
+      <hr className="separator" />
+      <ResourceRender
+        override={{ name: "Board" }}
+        suffix={`${board.rows}x${board.cols}`}
+        showChrome={true}
+      />
+      <ResourceRender
+        override={{
+          name: "progress",
+          count: Decimal.fromValue(F.boardProgress(context)),
+          display: "percentage",
+        }}
+        showChrome={true}
+      />
+      <ResourceRender
+        override={{
+          name: "Mines",
+          count: Decimal.fromValue(board.cellStates.flagged),
+          maxCount: Decimal.fromValue(board.cellContents.mine),
+        }}
+        showMaxValue={true}
+        showChrome={true}
+      />
+    </div>
+  );
+}
+
+function ModeControls() {
+  const {
+    context,
+    resources: { rows, cols, hints, resets, minesweeper },
+  } = useGameContext();
+  const [tapMode, setTapMode] = useState(minesweeper.extra.tapMode);
+  const reveal = tapMode === "reveal";
+  let board: Board = minesweeper.extra.board;
+
+  function toggleTapMode(event: MouseEvent) {
+    event.preventDefault();
+    minesweeper.extra.tapMode = reveal ? "flag" : "reveal";
+    setTapMode(minesweeper.extra.tapMode);
   }
 
   const boardSizeChanged =
@@ -291,51 +387,55 @@ function MineSweeper() {
   }
 
   return (
-    <>
-      <div className="panel">
-        <div className="title-bar">Minesweeper</div>
-        <div className="full center">
-          <TableGrid
-            className="mine-sweeper"
-            cells={board.cells}
-            cellClass={(cell) => `cell-${cell.state}`}
-            onRender={(cell) => <CellIcon cell={cell} />}
-            onClick={(event, cell) => handleCellClick(event, cell, context)}
-          >
-            <ResetBox />
-          </TableGrid>
-        </div>
-      </div>
-      <div className="game-controls panel">
-        <div className="half">
-          <button className="buy-button" onClick={reset} id="button-reset">
-            <ResourceRender
-              resource={resets}
-              override={{ count: Decimal.dOne }}
-              showValue={false}
-              showChrome={false}
-              infix=""
-              suffix="the Game"
-            />
-          </button>
-        </div>
-        <div className="half">
-          <BuyButton
-            resource={hints}
-            overrideCount={0}
-            onPurchase={(_, numHints) =>
-              getHint(Decimal.fromValue(numHints).toNumber())
-            }
+    <div className="panel" id="mode-controls">
+      <div className="half left">
+        <span>Tap mode:</span>
+        <button
+          type="button"
+          value={tapMode}
+          onClick={toggleTapMode}
+          id="button-tapmode"
+        >
+          <Icon
+            icon={reveal ? _cellIcons.revealed[9] : _cellIcons.flagged}
+            className={`icon-${reveal ? "revealed" : "flagged"}`}
           />
-        </div>
-        {boardSizeChanged && (
-          <div className="left full" id="reset-info">
-            On reset, game board will change to size to
-            {` ${rows.value()}x${cols.value()}`}
-          </div>
-        )}
+          {reveal ? "Revealing" : "Flagging"}
+        </button>
       </div>
-    </>
+      <div className="spacer"></div>
+      <div className="right">
+        <span>Buy amount:</span>
+        <BuyButton.BuyAmountButtons />
+      </div>
+      <div className="half">
+        <button className="buy-button" onClick={reset} id="button-reset">
+          <ResourceRender
+            resource={resets}
+            override={{ count: Decimal.dOne }}
+            showValue={false}
+            showChrome={false}
+            infix=""
+            suffix="the Game"
+          />
+        </button>
+      </div>
+      <div className="half">
+        <BuyButton
+          resource={hints}
+          overrideCount={0}
+          onPurchase={(_, numHints) =>
+            getHint(Decimal.fromValue(numHints).toNumber())
+          }
+        />
+      </div>
+      {boardSizeChanged && (
+        <div className="left full" id="reset-info">
+          On reset, game board will change to size to
+          {` ${rows.value()}x${cols.value()}`}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -354,6 +454,7 @@ const _cellIcons = {
     "ti:square-number-6",
     "ti:square-number-7",
     "ti:square-number-8",
+    "ti:square-dot",
   ],
 };
 
@@ -420,8 +521,8 @@ function ResetBox() {
   }
 
   return (
-    <div className="reset-box">
-      <div className={`panel shadow board-state-${board.state}`}>
+    <div id="reset-box">
+      <div className={`panel shadow board-${board.state}`}>
         <div className="title-bar">{title}</div>
         <div className="full center">Game over!</div>
         <div className="full center">
@@ -945,7 +1046,7 @@ const F = {
     },
   }: Context): number => {
     return (
-      (100 * (board.cellCounts.revealed + board.cellCounts.flagged)) /
+      (board.cellStates.revealed + board.cellStates.flagged) /
       (board.rows * board.cols)
     );
   },
@@ -979,7 +1080,7 @@ const F = {
       },
     },
   }: Context) => {
-    return board.rows * board.cols - board.numMines - board.cellCounts.revealed;
+    return board.rows * board.cols - board.numMines - board.cellStates.revealed;
   },
 
   resetTime: ({

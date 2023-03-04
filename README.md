@@ -10,10 +10,11 @@
 - Prestige
 - Icon badging
 
-# Long term ideals
+# Long term ideas
 
 - Show loading progress on screen
 - Document utils and models
 - Better unit test coverage
 - Turn resource into a class?
 - Libraries for icons, toast, nux, resources, progress bars, Kepler vars
+- Can resources have DecimalSource count instead of Decimal?

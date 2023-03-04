@@ -1,144 +1,164 @@
 @use "./Theme";
 
 .mine-sweeper {
-  .board {
-    &-inactive {
-      @include Theme.background($primary: 15%, $secondary: 100%);
-    }
-
-    &-active {
-      @include Theme.background($neutral: 15%, $secondary: 100%);
-    }
-
-    &-won {
-      @include Theme.background($positive: 15%, $secondary: 100%);
-    }
-
-    &-lost {
-      @include Theme.background($negative: 15%, $secondary: 100%);
-    }
-  }
-
-  .cell {
-    &-hidden {
-      @include Theme.background($primary: 13%, $secondary: 100%);
-    }
-
-    &-revealed {
-      @include Theme.background($primary: 7%, $secondary: 100%);
-    }
-
-    &-hinted {
-      @include Theme.background($positive: 20%, $secondary: 100%);
-    }
-
-    &-flagged {
-      @include Theme.background($primary: 20%, $secondary: 100%);
-    }
-
-    &-blown {
-      @include Theme.background($primary: 40%, $secondary: 100%);
-    }
-  }
-
   .icon {
     display: inline-block;
     margin: 0 auto;
     width: 80%;
     height: 80%;
+  }
+}
 
-    &-hidden {
-      color: transparent;
-    }
+.icon {
+  &-hidden {
+    color: transparent;
+  }
 
-    &-revealed {
-      color: Theme.color(positive);
-    }
+  &-revealed {
+    color: Theme.color(positive);
+  }
 
-    &-hinted {
-      color: Theme.color(positive, 50%);
-    }
+  &-hinted {
+    color: Theme.color(positive, 50%);
+  }
 
-    &-flagged {
-      color: Theme.color(neutral);
-    }
+  &-flagged {
+    color: Theme.color(neutral);
+  }
 
-    &-blown {
-      color: Theme.color(negative);
-    }
+  &-blown {
+    color: Theme.color(negative);
+  }
 
-    &-inactive {
-      color: Theme.color(primary, 50%);
-    }
+  &-inactive {
+    color: Theme.color(primary, 50%);
+  }
 
-    &-active {
-      color: Theme.color(primary);
-    }
+  &-active {
+    color: Theme.color(primary);
+  }
 
+  &-won {
+    color: Theme.color(positive);
+  }
+
+  &-lost {
+    color: Theme.color(negative);
+  }
+}
+
+.board {
+  &-inactive {
+    @include Theme.background($primary: 15%, $secondary: 100%);
+  }
+
+  &-active {
+    @include Theme.background($neutral: 15%, $secondary: 100%);
+  }
+
+  &-won {
+    @include Theme.background($positive: 15%, $secondary: 100%);
+  }
+
+  &-lost {
+    @include Theme.background($negative: 15%, $secondary: 100%);
+  }
+}
+
+.cell {
+  &-hidden {
+    @include Theme.background($primary: 13%, $secondary: 100%);
+  }
+
+  &-revealed {
+    @include Theme.background($primary: 7%, $secondary: 100%);
+  }
+
+  &-hinted {
+    @include Theme.background($positive: 20%, $secondary: 100%);
+  }
+
+  &-flagged {
+    @include Theme.background($primary: 20%, $secondary: 100%);
+  }
+
+  &-blown {
+    @include Theme.background($primary: 40%, $secondary: 100%);
+  }
+}
+
+#reset-box {
+  position: absolute;
+  display: block;
+
+  left: calc(50% - 160px);
+  top: calc(50% - 160px);
+  width: 320px;
+  height: 320px;
+  z-index: 8;
+
+  background-color: transparent;
+
+  span {
+    display: block;
+    width: 100%;
+  }
+
+  input[type="button"] {
+    padding: 0.5em 1em;
+    font-size: larger;
+  }
+
+  .progress-circle {
+    z-index: 9;
+    margin: 5px 0;
+  }
+
+  .panel {
+    height: 100%;
+    gap: 10px 0;
+
+    justify-content: start;
+    text-align: center;
+  }
+
+  .primary {
+    stroke: Theme.color(neutral, 50%);
+    stroke-width: 6;
+  }
+
+  .secondary {
+    stroke: transparent;
+    stroke-width: 0;
+  }
+
+  .board {
     &-won {
-      color: Theme.color(positive);
+      @include Theme.background($positive: 15%, $secondary: 85%);
+      text-shadow: Theme.color(positive) 0 0 1em;
     }
 
     &-lost {
-      color: Theme.color(negative);
+      @include Theme.background($negative: 15%, $secondary: 85%);
+      text-shadow: Theme.color(negative) 0 0 1em;
     }
   }
+}
 
-  .reset-box {
-    position: absolute;
-    display: block;
+#mode-controls {
+  @include Theme.background($neutral: 15%, $secondary: 100%);
 
-    left: calc(50% - 160px);
-    top: calc(50% - 160px);
-    width: 320px;
-    height: 320px;
-    z-index: 8;
+  span {
+    margin-right: 1ex;
+  }
 
-    background-color: transparent;
+  .icon {
+    width: 1em;
+    height: 1em;
+    margin: 0;
 
-    span {
-      display: block;
-      width: 100%;
-    }
-
-    input[type="button"] {
-      padding: 0.5em 1em;
-      font-size: larger;
-    }
-
-    .progress-circle {
-      z-index: 9;
-      margin: 5px 0;
-    }
-
-    .panel {
-      height: 100%;
-      gap: 10px 0;
-
-      justify-content: start;
-      text-align: center;
-    }
-
-    .primary {
-      stroke: Theme.color(neutral, 50%);
-      stroke-width: 6;
-    }
-
-    .secondary {
-      stroke: transparent;
-      stroke-width: 0;
-    }
-
-    .board-state {
-      &-won {
-        @include Theme.background($positive: 15%, $secondary: 85%);
-        text-shadow: Theme.color(positive) 0 0 1em;
-      }
-
-      &-lost {
-        @include Theme.background($negative: 15%, $secondary: 85%);
-        text-shadow: Theme.color(negative) 0 0 1em;
-      }
-    }
+    display: inline-block;
+    align-items: center;
+    vertical-align: middle;
   }
 }
