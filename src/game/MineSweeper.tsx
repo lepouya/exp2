@@ -143,7 +143,7 @@ function genMineSweeper(context: Context) {
       name: "hintsCount",
       singularName: "hint",
       pluralName: "hints",
-      count: Decimal.dZero,
+      count: Decimal.dOne,
       cost(n) {
         return [
           { resource: "cells", count: Decimal.pow(2, Decimal.add(n, 1)) },
@@ -323,11 +323,6 @@ function MineSweeper() {
           <BuyButton
             resource={hints}
             overrideCount={0}
-            // overrideMaxCount={
-            //   board.rows * board.cols -
-            //   board.numMines -
-            //   board.cellCounts.revealed
-            // }
             onPurchase={(_, numHints) =>
               getHint(Decimal.fromValue(numHints).toNumber())
             }

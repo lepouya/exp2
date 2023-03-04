@@ -1,5 +1,6 @@
 import Decimal, { DecimalSource } from "break_eternity.js";
 import { MouseEvent } from "react";
+import { useLocation } from "react-router";
 
 import { Resource, ResourceCount } from "../model/Resource";
 import Arr from "../utils/arrays";
@@ -61,7 +62,9 @@ export default function BuyButton({
   style,
   onPurchase,
 }: BuyButtonProps) {
+  const location = useLocation();
   const context = useGameContext();
+  const debug = location.search.toLowerCase().includes("debug");
   const res = context.resourceManager.get(resource);
   const buyAmount =
     buyAmounts[overrideBuyAmount ?? context.settings.buyAmount ?? "+1"] ??
@@ -130,7 +133,7 @@ export default function BuyButton({
   const hasCost = tx.cost.some(({ count }) => Decimal.neq(count, 0));
   const classNames = [className, "buy-button", active ? null : "inactive"];
 
-  if (!hasGain) {
+  if (!hasGain && !debug) {
     return null;
   }
   return (
@@ -146,6 +149,11 @@ export default function BuyButton({
       {hasCost && enabled && infix && <div className="infix">{infix}</div>}
       {hasCost && enabled && renderResourceCounts(tx.cost, -1)}
       {suffix && <div className="suffix">{suffix}</div>}
+      {debug && (
+        <div className="full debug">
+          {JSON.stringify(tx, (k, v) => (k === "resource" ? v.name : v), 2)}
+        </div>
+      )}
     </button>
   );
 }
