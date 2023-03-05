@@ -1587,7 +1587,7 @@ function boardReset(context: Context, automatic = false) {
     }
   }
 
-  return true;
+  return recomputeBoardState(context);
 }
 
 function handleCellClick(event: MouseEvent, cell: Cell, context: Context) {
