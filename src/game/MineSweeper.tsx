@@ -582,14 +582,14 @@ const _cellIcons = {
     "ti:square-number-6",
     "ti:square-number-7",
     "ti:square-number-8",
-    "ti:square-dot",
+    "ti:square",
   ],
 };
 
 function CellIcon({ cell }: { cell: Cell }) {
   let icon = _cellIcons[cell.state];
   if (icon instanceof Array) {
-    icon = icon[cell.neighborContents.mine];
+    icon = icon[cell.neighborContents?.mine ?? 9];
   }
 
   return <Icon icon={icon} className={`icon-${cell.state}`} />;
