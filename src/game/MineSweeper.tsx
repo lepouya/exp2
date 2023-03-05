@@ -1571,21 +1571,21 @@ function boardReset(context: Context, automatic = false) {
   }
 
   // Auto click on start
-  // if (
-  //   resources.autoClickBoard.count.gt(0) &&
-  //   (resources.autoClickBoard.unlocked ?? true) &&
-  //   !resources.autoClickBoard.disabled
-  // ) {
-  //   for (let i = resources.autoClickBoard.value().toNumber(); i > 0; i--) {
-  //     const r = Math.floor(Math.random() * resources.rows.value().toNumber());
-  //     const c = Math.floor(Math.random() * resources.cols.value().toNumber());
-  //     const cell = board.cells[r][c];
-  //     if (cell.state === "hidden" && board.state === "active") {
-  //       actOnCell(cell, "reveal");
-  //       stateChanged(context, "cell", cell.state, true);
-  //     }
-  //   }
-  // }
+  if (
+    resources.autoClickBoard.count.gt(0) &&
+    (resources.autoClickBoard.unlocked ?? true) &&
+    !resources.autoClickBoard.disabled
+  ) {
+    for (let i = resources.autoClickBoard.value().toNumber(); i > 0; i--) {
+      const r = Math.floor(Math.random() * resources.rows.value().toNumber());
+      const c = Math.floor(Math.random() * resources.cols.value().toNumber());
+      const cell = board.cells[r][c];
+      if (cell.state === "hidden" && board.state === "active") {
+        actOnCell(cell, "reveal");
+        stateChanged(context, "cell", cell.state, true);
+      }
+    }
+  }
 
   return true;
 }
@@ -1732,6 +1732,20 @@ function shouldAutoTick(this: Resource, dt: number, src?: string) {
   return src === "tick" && getTickProgress(this, dt) >= 1.0;
 }
 
+function recomputeBoardState(context: Context, invalidate = true) {
+  if (invalidate) {
+    const resources = context.resourceManager.resources;
+    resources.minesweeper.extra.board = {
+      ...calculateBoardState(
+        resources.minesweeper.extra.board,
+        resources.minesweeper.extra.maxErrors,
+      ),
+    };
+  }
+
+  return invalidate;
+}
+
 function canRevealNeighbors(cell: Cell) {
   return (
     cell.state === "revealed" &&
@@ -1769,7 +1783,7 @@ function revealNeighborsTask(context: Context) {
     true,
   );
 
-  return revelaed > 0;
+  return recomputeBoardState(context, revelaed > 0);
 }
 
 function resetGameTask(context: Context) {
@@ -1846,7 +1860,7 @@ function flagMinesTask(context: Context) {
   actOnCell(neighbor, "flag");
   stateChanged(context, "cell", neighbor.state, true);
 
-  return true;
+  return recomputeBoardState(context);
 }
 
 function canRevealHints(cell: Cell) {
@@ -1876,7 +1890,7 @@ function revealHintsTask(context: Context) {
   actOnCell(cell, "reveal");
   stateChanged(context, "cell", cell.state, true);
 
-  return true;
+  return recomputeBoardState(context);
 }
 
 function purchaseHintsTask(context: Context) {
@@ -1919,7 +1933,7 @@ function purchaseHintsTask(context: Context) {
   );
   if (numHints > 0) {
     countActions(hints, true, numHints);
-    return true;
+    return recomputeBoardState(context);
   }
 
   return false;
@@ -1942,5 +1956,5 @@ function expandBoardDims(context: Context) {
   }
 
   countActions(res, true);
-  return true;
+  return recomputeBoardState(context);
 }
