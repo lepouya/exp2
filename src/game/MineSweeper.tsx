@@ -5,13 +5,16 @@ import BuyButton from "../components/BuyButton";
 import Game from "../components/Game";
 import useGameContext from "../components/GameContext";
 import Icon from "../components/Icon";
+import ProgressBar from "../components/ProgressBar";
 import ProgressCircle from "../components/ProgressCircle";
 import ResourceRender from "../components/ResourceRender";
 import TableGrid from "../components/TableGrid";
+import ToggleButton from "../components/ToggleButton";
 import { Context } from "../model/Context";
 import { Resource } from "../model/Resource";
 import Arr from "../utils/arrays";
 import clamp from "../utils/clamp";
+import Format from "../utils/format";
 import message from "../utils/message";
 import { setSaveProperties } from "../utils/store";
 import tickTimer from "../utils/tickTimer";
@@ -31,6 +34,7 @@ export default function initMineSweeper(context: Context) {
         <MineSweeper />
         <ModeControls />
         <Upgrades />
+        <Automation />
       </div>
     ),
   });
@@ -192,9 +196,7 @@ function genMineSweeper(context: Context) {
           { resource: "cells", count: Decimal.pow(2, Decimal.add(n, 1)) },
         ];
       },
-      unlockCost() {
-        return [{ resource: "wins", count: 1 }];
-      },
+      unlockCost: () => [],
       value(this: Resource) {
         return this.count.floor();
       },
@@ -262,6 +264,131 @@ function genMineSweeper(context: Context) {
         auto: 0,
         manual: 0,
         total: 0,
+      },
+    },
+
+    {
+      name: "autoRevealNeighbors",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 1.5).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+      shouldTick: shouldAutoTick,
+      tick() {
+        return revealNeighborsTask(context);
+      },
+    },
+    {
+      name: "autoFlagMines",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 1.5).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+      shouldTick: shouldAutoTick,
+      tick() {
+        return flagMinesTask(context);
+      },
+    },
+    {
+      name: "autoRevealHints",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 1.5).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+      shouldTick: shouldAutoTick,
+      tick() {
+        return revealHintsTask(context);
+      },
+    },
+    {
+      name: "autoPurchaseHints",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 2).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+      shouldTick: shouldAutoTick,
+      tick() {
+        return purchaseHintsTask(context);
+      },
+    },
+    {
+      name: "autoResetGame",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 1.5).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+      shouldTick: shouldAutoTick,
+      tick() {
+        return resetGameTask(context);
+      },
+    },
+    {
+      name: "autoClickBoard",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 2).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+    },
+    {
+      name: "autoBoardUpgrade",
+      singularName: "Auto Expand Board",
+      pluralName: "Auto Expand Board",
+      unlocked: false,
+      count: Decimal.dZero,
+      cost(n) {
+        return [
+          {
+            resource: "automation",
+            count: Decimal.pow(Decimal.add(n, 1), 2).floor(),
+          },
+        ];
+      },
+      unlockCost: () => [],
+      shouldTick: shouldAutoTick,
+      tick() {
+        return expandBoardDims(context);
       },
     },
   ];
@@ -338,7 +465,7 @@ function ResourceBar() {
       <ResourceRender
         override={{
           name: "progress",
-          count: Decimal.fromValue(F.boardProgress(context)),
+          count: Decimal.fromValue(boardProgress(context)),
           display: "percentage",
         }}
         showChrome={true}
@@ -380,7 +507,7 @@ function ModeControls() {
   }
 
   function getHint(numHints: number) {
-    numHints = genHints(board, numHints, 0, 8, F.hintQuality(context));
+    numHints = genHints(board, numHints, 0, 8, hintQuality(context));
     if (numHints > 0) {
       countActions(hints, false, numHints);
       minesweeper.extra.board = board = { ...board };
@@ -494,7 +621,7 @@ function ResetBox() {
     return null;
   }
 
-  const waitTime = F.resetTime(context);
+  const waitTime = resetTime(context);
   const remainingTime = resetSpeed.extra.remainingTime;
 
   if (!isResetting && remainingTime > 0) {
@@ -641,7 +768,7 @@ function Upgrades() {
         <div className="quarter">
           <ResourceRender
             override={{
-              count: Decimal.fromValue(F.difficultyScore(context)),
+              count: Decimal.fromValue(difficultyScore(context)),
               display: "percentage",
             }}
             showChrome={true}
@@ -751,6 +878,308 @@ function Upgrades() {
           CAUTION: it might trigger a mine if they have not been properly
           flagged!
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Automation() {
+  const {
+    resources: {
+      revealNeighbors,
+      autoRevealNeighbors,
+      autoFlagMines,
+      autoRevealHints,
+      autoPurchaseHints,
+      autoResetGame,
+      autoClickBoard,
+      autoBoardUpgrade,
+    },
+  } = useGameContext();
+
+  const autoTimeStr = Format.time(1000 * 60, { ago: "" });
+
+  function tickProgress(res: Resource) {
+    // Prevent flickering
+    return !res.disabled && res.value().gte(60) ? 1 : getTickProgress(res);
+  }
+
+  return (
+    <div id="automation" className="automation">
+      <div className="game-controls panel">
+        <div className="title-bar">Cell Automation</div>
+
+        <div className="half">
+          <ResourceRender
+            resource={autoRevealNeighbors}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${
+              autoRevealNeighbors.count.eq(1) ? "" : "s"
+            } every ${autoTimeStr}`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoRevealNeighbors}
+            allowUnlocking={true}
+            enabled={revealNeighbors.unlocked && revealNeighbors.count.gt(0)}
+            prefix={!autoRevealNeighbors.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={
+              autoRevealNeighbors.unlocked && !autoRevealNeighbors.disabled
+            }
+            onChange={(checked) => (autoRevealNeighbors.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={
+              autoRevealNeighbors.unlocked && autoRevealNeighbors.count.gt(0)
+            }
+          />
+        </div>
+        <ProgressBar
+          value={tickProgress(autoRevealNeighbors)}
+          className="full computed"
+        >
+          Automatically reveals the neighboring hidden squares if all the mines
+          around it have been flagged.
+        </ProgressBar>
+
+        <hr className="separator" />
+
+        <div className="half">
+          <ResourceRender
+            resource={autoFlagMines}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${
+              autoFlagMines.count.eq(1) ? "" : "s"
+            } every ${autoTimeStr}`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoFlagMines}
+            allowUnlocking={true}
+            enabled={
+              autoRevealNeighbors.unlocked && autoRevealNeighbors.count.gt(0)
+            }
+            prefix={!autoFlagMines.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={autoFlagMines.unlocked && !autoFlagMines.disabled}
+            onChange={(checked) => (autoFlagMines.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={autoFlagMines.unlocked && autoFlagMines.count.gt(0)}
+          />
+        </div>
+        <ProgressBar
+          value={tickProgress(autoFlagMines)}
+          className="full computed"
+        >
+          Automatically flags the hidden mines around a square if there are no
+          more hidden clear squares left around it.
+        </ProgressBar>
+
+        <hr className="separator" />
+
+        <div className="half">
+          <ResourceRender
+            resource={autoRevealHints}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${
+              autoRevealHints.count.eq(1) ? "" : "s"
+            } every ${autoTimeStr}`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoRevealHints}
+            allowUnlocking={true}
+            prefix={!autoRevealHints.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={autoRevealHints.unlocked && !autoRevealHints.disabled}
+            onChange={(checked) => (autoRevealHints.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={autoRevealHints.unlocked && autoRevealHints.count.gt(0)}
+          />
+        </div>
+        <ProgressBar
+          value={tickProgress(autoRevealHints)}
+          className="full computed"
+        >
+          Automatically reveals any purchased hints.
+        </ProgressBar>
+
+        <hr className="separator" />
+
+        <div className="half">
+          <ResourceRender
+            resource={autoPurchaseHints}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${
+              autoPurchaseHints.count.eq(1) ? "" : "s"
+            } every ${autoTimeStr}`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoPurchaseHints}
+            allowUnlocking={true}
+            prefix={!autoPurchaseHints.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={autoPurchaseHints.unlocked && !autoPurchaseHints.disabled}
+            onChange={(checked) => (autoPurchaseHints.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={
+              autoPurchaseHints.unlocked && autoPurchaseHints.count.gt(0)
+            }
+          />
+        </div>
+        <ProgressBar
+          value={tickProgress(autoPurchaseHints)}
+          className="full computed"
+        >
+          Automatically makes a hint purchase when there are no other actions
+          available.
+        </ProgressBar>
+      </div>
+
+      <div className="game-controls panel">
+        <div className="title-bar">Game Automation</div>
+
+        <div className="half">
+          <ResourceRender
+            resource={autoResetGame}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${
+              autoResetGame.count.eq(1) ? "" : "s"
+            } every ${autoTimeStr}`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoResetGame}
+            allowUnlocking={true}
+            prefix={!autoResetGame.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={autoResetGame.unlocked && !autoResetGame.disabled}
+            onChange={(checked) => (autoResetGame.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={autoResetGame.unlocked && autoResetGame.count.gt(0)}
+          />
+        </div>
+        <ProgressBar
+          value={tickProgress(autoResetGame)}
+          className="full computed"
+        >
+          Automatically initiates game reset when the game is either won or
+          lost.
+        </ProgressBar>
+
+        <hr className="separator" />
+
+        <div className="half">
+          <ResourceRender
+            resource={autoClickBoard}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${autoClickBoard.count.eq(1) ? "" : "s"} after reset`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoClickBoard}
+            allowUnlocking={true}
+            prefix={!autoClickBoard.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={autoClickBoard.unlocked && !autoClickBoard.disabled}
+            onChange={(checked) => (autoClickBoard.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={autoClickBoard.unlocked && autoClickBoard.count.gt(0)}
+          />
+        </div>
+        <div className="full computed">
+          Automatically reveals cells on new games. Does not differentiate
+          between mines and clear cells.
+        </div>
+      </div>
+
+      <div className="game-controls panel">
+        <div className="title-bar">Board Automation</div>
+
+        <div className="half">
+          <ResourceRender
+            resource={autoBoardUpgrade}
+            showChrome={true}
+            showLocked={true}
+            infix=""
+            suffix={`time${
+              autoBoardUpgrade.count.eq(1) ? "" : "s"
+            } every ${autoTimeStr}`}
+          />
+        </div>
+        <div className="right half">
+          <BuyButton
+            resource={autoBoardUpgrade}
+            allowUnlocking={true}
+            prefix={!autoBoardUpgrade.unlocked ? "Unlock" : "Additional"}
+          />
+        </div>
+        <div className="full right">
+          Enabled:
+          <ToggleButton
+            checked={autoBoardUpgrade.unlocked && !autoBoardUpgrade.disabled}
+            onChange={(checked) => (autoBoardUpgrade.disabled = !checked)}
+            checkedContents={<Icon icon="robot" />}
+            unCheckedContents={<Icon icon="robot-off" />}
+            enabled={autoBoardUpgrade.unlocked && autoBoardUpgrade.count.gt(0)}
+          />
+        </div>
+        <ProgressBar
+          value={tickProgress(autoBoardUpgrade)}
+          className="full computed"
+        >
+          Automatically purchases game width and game height expansions if
+          affordable.
+        </ProgressBar>
       </div>
     </div>
   );
@@ -1122,7 +1551,7 @@ function boardReset(context: Context, automatic = false) {
     resources.resets.extra.total === 0;
 
   // First game always has 1 mine
-  const m = firstGame ? 1 : F.numMines(context);
+  const m = firstGame ? 1 : numMines(context);
 
   resources.minesweeper.extra.tapMode = "reveal";
   resources.minesweeper.extra.board = board = genBoard(
@@ -1241,77 +1670,277 @@ function handleCellClick(event: MouseEvent, cell: Cell, context: Context) {
   }
 }
 
-const F = {
-  boardProgress: ({
-    resourceManager: {
-      resources: {
-        minesweeper: {
-          extra: { board },
-        },
-      },
-    },
-  }: Context): number => {
-    return (
-      (100 * (board.cellStates?.revealed + board.cellStates?.flagged)) /
-      (board.rows * board.cols)
+function boardProgress({ resourceManager: { resources } }: Context): number {
+  const board: Board = resources.minesweeper.extra.board;
+  return (
+    (100 * (board.cellStates?.revealed + board.cellStates?.flagged)) /
+    (board.rows * board.cols)
+  );
+}
+
+function numMines({ resourceManager: { resources } }: Context): number {
+  return (
+    resources.rows.value().toNumber() *
+    resources.cols.value().toNumber() *
+    (resources.difficulty.value().toNumber() / 100)
+  );
+}
+
+function hintQuality({ resourceManager: { resources } }: Context): number {
+  return resources.hintQuality.value().toNumber() / 100;
+}
+
+function remainingHints({ resourceManager: { resources } }: Context): number {
+  const board: Board = resources.minesweeper.extra.board;
+  return (
+    board.rows * board.cols -
+    board.cellContents?.mine -
+    board.cellStates?.revealed
+  );
+}
+
+function resetTime({ resourceManager: { resources } }: Context): number {
+  return (
+    (1 - resources.resetSpeed.value().toNumber() / 100) *
+    Math.sqrt(
+      resources.rows.value().toNumber() *
+        resources.cols.value().toNumber() *
+        (resources.difficulty.value().toNumber() / 100) *
+        10,
+    )
+  );
+}
+
+function difficultyScore({ resourceManager: { resources } }: Context): number {
+  return (resources.difficulty.value().toNumber() + 10) / 25;
+}
+
+function getTickProgress(res: Resource<Context>, dt?: number): number {
+  if (!res || res.count.lte(0) || !(res.unlocked ?? true) || res.disabled) {
+    return NaN;
+  }
+
+  const context = res.manager.context;
+  dt ??=
+    (Date.now() - (res.execution.lastTick ?? Date.now())) /
+    1000.0 /
+    context.settings.timeDilation;
+  return (dt * res.count.toNumber()) / 60.0;
+}
+
+function shouldAutoTick(this: Resource, dt: number, src?: string) {
+  return src === "tick" && getTickProgress(this, dt) >= 1.0;
+}
+
+function canRevealNeighbors(cell: Cell) {
+  return (
+    cell.state === "revealed" &&
+    cell.contents === "clear" &&
+    cell.neighborContents.mine ===
+      cell.neighborStates.flagged + cell.neighborStates.blown &&
+    cell.neighborStates.hidden > 0
+  );
+}
+
+function revealNeighborsTask(context: Context) {
+  const resources = context.resourceManager.resources;
+  const board: Board = resources.minesweeper.extra.board;
+  const res = resources.autoRevealNeighbors;
+
+  if (
+    res.count.lte(0) ||
+    !(res.unlocked ?? true) ||
+    res.disabled ||
+    board.state !== "active"
+  ) {
+    return null;
+  }
+
+  const candidates = board.cells.flat().filter(canRevealNeighbors);
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  const revelaed = revealNeighbors(
+    context,
+    board,
+    Arr.shuffle(candidates)[0],
+    resources.revealNeighbors.count.toNumber(),
+    true,
+  );
+
+  return revelaed > 0;
+}
+
+function resetGameTask(context: Context) {
+  const resources = context.resourceManager.resources;
+  const board: Board = resources.minesweeper.extra.board;
+
+  if (
+    resources.autoResetGame.count.lte(0) ||
+    !(resources.autoResetGame.unlocked ?? true) ||
+    resources.autoResetGame.disabled ||
+    board.state === "active" ||
+    board.state === "inactive" ||
+    resources.resetSpeed.extra.remainingTime > 0
+  ) {
+    return null;
+  }
+
+  const waitTime = resetTime(context);
+  if (waitTime < 0.001) {
+    boardReset(context, true);
+    return true;
+  } else {
+    resources.resetSpeed.extra.remainingTime = waitTime;
+    return false;
+  }
+}
+
+function canFlagMines(cell: Cell) {
+  return (
+    cell.state === "revealed" &&
+    cell.contents === "clear" &&
+    cell.neighborContents.mine ===
+      cell.neighborStates.flagged +
+        cell.neighborStates.blown +
+        cell.neighborStates.hidden &&
+    cell.neighborContents.clear === cell.neighborStates.revealed &&
+    cell.neighborStates.hidden > 0
+  );
+}
+
+function flagMinesTask(context: Context) {
+  const board: Board =
+    context.resourceManager.resources.minesweeper.extra.board;
+  const res = context.resourceManager.resources.autoFlagMines;
+
+  if (
+    res.count.lte(0) ||
+    !(res.unlocked ?? true) ||
+    res.disabled ||
+    board.state !== "active"
+  ) {
+    return null;
+  }
+
+  const candidates = board.cells.flat().filter(canFlagMines);
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  const cell = Arr.shuffle(candidates)[0];
+  const choices = [];
+  for (let dr = cell.row - 1; dr <= cell.row + 1; dr++) {
+    for (let dc = cell.col - 1; dc <= cell.col + 1; dc++) {
+      if ((board.cells[dr] ?? [])[dc]?.state === "hidden") {
+        choices.push(board.cells[dr][dc]);
+      }
+    }
+  }
+  if (choices.length === 0) {
+    return false;
+  }
+
+  const neighbor = Arr.shuffle(choices)[0];
+  actOnCell(neighbor, "flag");
+  stateChanged(context, "cell", neighbor.state, true);
+
+  return true;
+}
+
+function canRevealHints(cell: Cell) {
+  return cell.state === "hinted" && cell.contents === "clear";
+}
+
+function revealHintsTask(context: Context) {
+  const board: Board =
+    context.resourceManager.resources.minesweeper.extra.board;
+  const res = context.resourceManager.resources.autoRevealHints;
+
+  if (
+    res.count.lte(0) ||
+    !(res.unlocked ?? true) ||
+    res.disabled ||
+    board.state !== "active"
+  ) {
+    return null;
+  }
+
+  const candidates = board.cells.flat().filter(canRevealHints);
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  const cell = Arr.shuffle(candidates)[0];
+  actOnCell(cell, "reveal");
+  stateChanged(context, "cell", cell.state, true);
+
+  return true;
+}
+
+function purchaseHintsTask(context: Context) {
+  const board: Board =
+    context.resourceManager.resources.minesweeper.extra.board;
+  const res = context.resourceManager.resources.autoPurchaseHints;
+
+  if (
+    res.count.lte(0) ||
+    !(res.unlocked ?? true) ||
+    res.disabled ||
+    board.state !== "active" ||
+    remainingHints(context) === 0
+  ) {
+    return null;
+  }
+
+  const hints = context.resourceManager.resources.hints;
+  const candidates = board.cells
+    .flat()
+    .filter(
+      (cell) =>
+        canRevealHints(cell) || canRevealNeighbors(cell) || canFlagMines(cell),
     );
-  },
+  if (candidates.length > 0) {
+    return false;
+  }
 
-  numMines: ({
-    resourceManager: {
-      resources: { rows, cols, difficulty },
-    },
-  }: Context) => {
-    return (
-      rows.value().toNumber() *
-      cols.value().toNumber() *
-      (difficulty.value().toNumber() / 100)
-    );
-  },
+  const purchase = hints.buy();
+  if (purchase.count === 0) {
+    return false;
+  }
 
-  hintQuality: ({
-    resourceManager: {
-      resources: { hintQuality },
-    },
-  }: Context) => {
-    return hintQuality.value().toNumber() / 100;
-  },
+  const numHints = genHints(
+    board,
+    Decimal.fromValue(purchase.gain[0].count).toNumber(),
+    0,
+    8,
+    hintQuality(context),
+  );
+  if (numHints > 0) {
+    countActions(hints, true, numHints);
+    return true;
+  }
 
-  remainingHints: ({
-    resourceManager: {
-      resources: {
-        minesweeper: {
-          extra: { board },
-        },
-      },
-    },
-  }: Context) => {
-    return (
-      board.rows * board.cols - board.numMines - board.cellStates?.revealed
-    );
-  },
+  return false;
+}
 
-  resetTime: ({
-    resourceManager: {
-      resources: { rows, cols, difficulty, resetSpeed },
-    },
-  }: Context) => {
-    return (
-      (1 - resetSpeed.value().toNumber() / 100) *
-      Math.sqrt(
-        rows.value().toNumber() *
-          cols.value().toNumber() *
-          (difficulty.value().toNumber() / 100) *
-          10,
-      )
-    );
-  },
+function expandBoardDims(context: Context) {
+  const ress = context.resourceManager.resources;
+  if (
+    ress.autoBoardUpgrade.count.lte(0) ||
+    !(ress.autoBoardUpgrade.unlocked ?? true) ||
+    ress.autoBoardUpgrade.disabled
+  ) {
+    return null;
+  }
 
-  difficultyScore: ({
-    resourceManager: {
-      resources: { difficulty },
-    },
-  }: Context) => {
-    return (difficulty.value().toNumber() + 10) / 25;
-  },
-};
+  const res = ress.rows.count < ress.cols.count ? ress.rows : ress.cols;
+  const purchase = res.buy();
+  if (purchase.count === 0) {
+    return false;
+  }
+
+  countActions(res, true);
+  return true;
+}
