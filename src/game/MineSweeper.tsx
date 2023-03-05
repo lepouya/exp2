@@ -1920,7 +1920,7 @@ function purchaseHintsTask(context: Context) {
   }
 
   const purchase = hints.buy();
-  if (purchase.count === 0) {
+  if (Decimal.eq(purchase.count, 0)) {
     return false;
   }
 
@@ -1951,7 +1951,7 @@ function expandBoardDims(context: Context) {
 
   const res = ress.rows.count < ress.cols.count ? ress.rows : ress.cols;
   const purchase = res.buy();
-  if (purchase.count === 0) {
+  if (Decimal.eq(purchase.count, 0)) {
     return false;
   }
 
