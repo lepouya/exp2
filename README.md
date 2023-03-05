@@ -1,6 +1,8 @@
 # Todo plan
 
 - Grids of 3/4/6 sided polygons
+- Submenus
+- Sticky header/footer
 
 # Things to experiment with
 
