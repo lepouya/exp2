@@ -16,6 +16,7 @@
 
 - Can resources have DecimalSource count instead of Decimal?
 - UnlockCost seems to be unnecessary
+- Resource rates flicker a lot
 
 # Long term ideas
 
