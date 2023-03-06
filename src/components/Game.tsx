@@ -12,8 +12,8 @@ import { setTheme } from "../utils/document";
 import generate, { Generative } from "../utils/generate";
 import useGameContext from "./GameContext";
 import Icon from "./Icon";
-import NuxRoot from "./NuxRoot";
 import Options from "./Options";
+import PopupRoot from "./PopupRoot";
 import toast from "./Toast";
 
 export default function Game() {
@@ -97,7 +97,7 @@ export default function Game() {
           ))}
         </div>
       </nav>
-      <NuxRoot />
+      <PopupRoot />
       <Routes>
         {root.path !== "/" && <Route path="/" element={root.body} />}
         {[...left, ...right].map((tab) => (

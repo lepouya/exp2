@@ -1,12 +1,12 @@
 import { Context } from "../model/Context";
-import { NuxGenerator } from "../model/Nux";
+import { PopupGenerator } from "../model/Popup";
 
 export default function initTutorial(context: Context) {
-  context.nuxManager.register(...tsInit);
-  context.nuxManager.setNuxState("Tutorial", {});
+  context.popupManager.register(...tsInit);
+  context.popupManager.setPopupState("Tutorial", {});
 }
 
-const tsInit: NuxGenerator<Context>[] = [
+const tsInit: PopupGenerator<Context>[] = [
   {
     name: "Tutorial",
     step: 0,

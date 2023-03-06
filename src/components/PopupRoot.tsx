@@ -1,26 +1,26 @@
 import { MouseEvent, useEffect } from "react";
 
-import useGameContext from "../components/GameContext";
-import ResourceRender from "../components/ResourceRender";
 import { Context, ContextInitializers } from "../model/Context";
-import { Nux } from "../model/Nux";
+import { Popup } from "../model/Popup";
 import Format from "../utils/format";
 import Fn from "../utils/functions";
 import { Nullable, Optional } from "../utils/types";
+import useGameContext from "./GameContext";
+import ResourceRender from "./ResourceRender";
 
-export default function NuxRoot() {
-  const { nuxManager } = useGameContext();
-  const nux = nuxManager.getCurrentNux();
+export default function PopupRoot() {
+  const { popupManager } = useGameContext();
+  const popup = popupManager.getCurrentPopup();
 
   useEffect(() => {
-    const onMount = nux?.onMount;
-    const onUnmount = nux?.onUnmount;
+    const onMount = popup?.onMount;
+    const onUnmount = popup?.onUnmount;
     let elems: Nullable<NodeListOf<Element>>;
     try {
-      elems = document.querySelectorAll(nux?.highlightSelector ?? "");
+      elems = document.querySelectorAll(popup?.highlightSelector ?? "");
     } catch (_) {}
 
-    if (nux?.enabled) {
+    if (popup?.enabled) {
       elems?.forEach((elem) => elem.classList.add("highlight"));
       if (onMount) {
         onMount();
@@ -33,30 +33,30 @@ export default function NuxRoot() {
         onUnmount();
       }
     };
-  }, [nux?.name, nux?.step, nux?.enabled]);
+  }, [popup?.name, popup?.step, popup?.enabled]);
 
-  if (!nux) {
+  if (!popup) {
     return null;
   }
 
-  function validNux(otherNux: Optional<Nux>) {
+  function validPopup(otherPopup: Optional<Popup>) {
     return (
-      otherNux?.name != null &&
-      otherNux?.step != null &&
-      otherNux?.name != "" &&
-      !isNaN(otherNux?.step) &&
-      isFinite(otherNux?.step) &&
-      !(otherNux?.name == nux?.name && otherNux?.step == nux?.step)
+      otherPopup?.name != null &&
+      otherPopup?.step != null &&
+      otherPopup?.name != "" &&
+      !isNaN(otherPopup?.step) &&
+      isFinite(otherPopup?.step) &&
+      !(otherPopup?.name == popup?.name && otherPopup?.step == popup?.step)
     );
   }
 
-  function gotoNux(nextNux: Optional<Nux>, event?: MouseEvent) {
+  function gotoPopup(nextPopup: Optional<Popup>, event?: MouseEvent) {
     event?.preventDefault();
 
-    const state = nuxManager.getNuxState(nux);
-    nuxManager.delNuxState(nux);
-    if (nextNux && validNux(nextNux)) {
-      nuxManager.setNuxState(nextNux, { priority: state.priority });
+    const state = popupManager.getPopupState(popup);
+    popupManager.delPopupState(popup);
+    if (nextPopup && validPopup(nextPopup)) {
+      popupManager.setPopupState(nextPopup, { priority: state.priority });
     }
   }
 
@@ -65,42 +65,45 @@ export default function NuxRoot() {
   }
 
   const bounds = {
-    left: calcStyle(nux.bounds.left, "vw"),
-    bottom: calcStyle(`100vh - ${nux.bounds.top} - ${nux.bounds.height}`, "vh"),
-    width: calcStyle(nux.bounds.width, "vw"),
-    minHeight: calcStyle(nux.bounds.height, "vh"),
+    left: calcStyle(popup.bounds.left, "vw"),
+    bottom: calcStyle(
+      `100vh - ${popup.bounds.top} - ${popup.bounds.height}`,
+      "vh",
+    ),
+    width: calcStyle(popup.bounds.width, "vw"),
+    minHeight: calcStyle(popup.bounds.height, "vh"),
     maxHeight: calcStyle("100vh", "vh"),
   };
 
-  const nuxRoot = (
-    <div id="nux-root" style={bounds}>
-      <div className="panel shadow" style={{ minHeight: nux.bounds.height }}>
-        {nux.title && <div className="title-bar">{nux.title}</div>}
-        {nux.body}
-        {validNux(nux.prev) &&
+  const popupRoot = (
+    <div id="popup-root" style={bounds}>
+      <div className="panel shadow" style={{ minHeight: popup.bounds.height }}>
+        {popup.title && <div className="title-bar">{popup.title}</div>}
+        {popup.body}
+        {validPopup(popup.prev) &&
           !(
-            nux.prev?.name === nux.next?.name &&
-            nux.prev?.step === nux.next?.step
+            popup.prev?.name === popup.next?.name &&
+            popup.prev?.step === popup.next?.step
           ) && (
             <div className="prev">
-              <a href="" onClick={Fn.apply(gotoNux, nux.prev)}>
-                {nux.prev?.title ?? "< back"}
+              <a href="" onClick={Fn.apply(gotoPopup, popup.prev)}>
+                {popup.prev?.title ?? "< back"}
               </a>
             </div>
           )}
         <div className="next">
-          <a href="" onClick={Fn.apply(gotoNux, nux.next)}>
-            {nux.next?.title ?? (nux.next?.step ? "next >" : "done")}
+          <a href="" onClick={Fn.apply(gotoPopup, popup.next)}>
+            {popup.next?.title ?? (popup.next?.step ? "next >" : "done")}
           </a>
         </div>
-        {validNux(nux.skip) &&
+        {validPopup(popup.skip) &&
           !(
-            nux.skip?.name === nux.next?.name &&
-            nux.skip?.step === nux.next?.step
+            popup.skip?.name === popup.next?.name &&
+            popup.skip?.step === popup.next?.step
           ) && (
             <div className="skip">
-              <a href="" onClick={Fn.apply(gotoNux, nux.skip)}>
-                {nux.skip?.title ?? "skip >>>"}
+              <a href="" onClick={Fn.apply(gotoPopup, popup.skip)}>
+                {popup.skip?.title ?? "skip >>>"}
               </a>
             </div>
           )}
@@ -108,19 +111,19 @@ export default function NuxRoot() {
     </div>
   );
 
-  if (nux.greyOut) {
-    return <div className="greyout">{nuxRoot}</div>;
+  if (popup.greyOut) {
+    return <div className="greyout">{popupRoot}</div>;
   } else {
-    return nuxRoot;
+    return popupRoot;
   }
 }
 
 function registerOfflineSummary({
   settings,
   resourceManager,
-  nuxManager,
+  popupManager: popupManager,
 }: Context) {
-  nuxManager.register({
+  popupManager.register({
     name: "OfflineSummary",
     title: "While you were offline...",
     bounds: { height: "32em" },
@@ -178,7 +181,7 @@ function registerOfflineSummary({
       dt >= settings.offlineSummaryMinSecs &&
       Object.keys(changes).length > 0
     ) {
-      nuxManager.setNuxState("OfflineSummary", { step: 0 });
+      popupManager.setPopupState("OfflineSummary", { step: 0 });
     }
   };
 }

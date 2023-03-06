@@ -17,7 +17,7 @@ export type Settings = {
   maxResourceUpdateSecs: number;
   maxResourceTickSecs: number;
 
-  // Nux settings
+  // Popup settings
   offlineSummaryMinSecs: number;
   offlineSummaryMaxUpdates: number;
 

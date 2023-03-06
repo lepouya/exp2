@@ -5,7 +5,7 @@ import Obj from "../utils/objects";
 import { Optional } from "../utils/types";
 import { Resource, ResourceManager } from "./Resource";
 
-export type Nux = {
+export type Popup = {
   readonly name: string;
   readonly step: number;
 
@@ -14,9 +14,9 @@ export type Nux = {
   title: ReactNode;
   body: ReactNode;
 
-  prev: Optional<Nux>;
-  next: Optional<Nux>;
-  skip: Optional<Nux>;
+  prev: Optional<Popup>;
+  next: Optional<Popup>;
+  skip: Optional<Popup>;
 
   highlightSelector: string;
   greyOut: boolean;
@@ -32,55 +32,61 @@ export type Nux = {
   onUnmount?: () => void;
 };
 
-export type NuxState = {
+export type PopupState = {
   name: string;
   priority: number;
   step: number;
 };
 
-export type NuxManager<Context> = {
+export type PopupManager<Context> = {
   readonly context: Context;
   readonly currentStates: Resource<Context>;
-  readonly nuxes: Record<string, Record<number, NuxGenerator<Context>>>;
+  readonly popups: Record<string, Record<number, PopupGenerator<Context>>>;
 
-  register: (...nuxes: NuxGenerator<Context>[]) => void;
-  resolve: (name?: string, step?: number) => Nux | undefined;
+  register: (...popups: PopupGenerator<Context>[]) => void;
+  resolve: (name?: string, step?: number) => Popup | undefined;
 
-  getNuxState: (nux: string | Optional<Nux>) => NuxState;
-  setNuxState: (nux: string | Optional<Nux>, state: Optional<NuxState>) => void;
-  delNuxState: (nux: string | Optional<Nux>) => void;
+  getPopupState: (popup: string | Optional<Popup>) => PopupState;
+  setPopupState: (
+    popup: string | Optional<Popup>,
+    state: Optional<PopupState>,
+  ) => void;
+  delPopupState: (popup: string | Optional<Popup>) => void;
 
-  getCurrentNux: () => Nux | undefined;
+  getCurrentPopup: () => Popup | undefined;
 };
 
-export type NuxGenerator<Context> = Generative<Nux, [NuxManager<Context>]>;
+export type PopupGenerator<Context> = Generative<
+  Popup,
+  [PopupManager<Context>]
+>;
 
-export function genNuxManager<Context>(
+export function genPopupManager<Context>(
   context: Context,
   rm: ResourceManager<Context>,
-): NuxManager<Context> {
-  const currentStates = rm.get("nux:states");
-  const nm: NuxManager<Context> = {
+): PopupManager<Context> {
+  const currentStates = rm.get("popup:states");
+  const nm: PopupManager<Context> = {
     context,
     currentStates,
-    nuxes: {},
+    popups: {},
 
-    register(...nuxes) {
-      nuxes.forEach((nux) => {
-        if (!nm.nuxes[nux.name ?? ""]) {
-          nm.nuxes[nux.name ?? ""] = {};
+    register(...popups) {
+      popups.forEach((popup) => {
+        if (!nm.popups[popup.name ?? ""]) {
+          nm.popups[popup.name ?? ""] = {};
         }
-        Obj.assign(nm.nuxes[nux.name ?? ""], nux.step ?? 0, nux);
+        Obj.assign(nm.popups[popup.name ?? ""], popup.step ?? 0, popup);
       });
     },
 
     resolve(name = "", step = 0) {
-      const nux = (nm.nuxes[name] ?? {})[step];
-      if (!nux) {
+      const popup = (nm.popups[name] ?? {})[step];
+      if (!popup) {
         return undefined;
       }
 
-      const sortedSteps = Object.keys(nm.nuxes[name])
+      const sortedSteps = Object.keys(nm.popups[name])
         .map((n) => parseInt(n))
         .sort((a, b) => a - b);
       const stepIdx = sortedSteps.indexOf(step);
@@ -89,7 +95,7 @@ export function genNuxManager<Context>(
       const skipIdx = (1 + Math.floor(step / 100)) * 100;
 
       const res = generate(
-        nux,
+        popup,
         {
           name,
           step,
@@ -126,38 +132,41 @@ export function genNuxManager<Context>(
       return res;
     },
 
-    getNuxState(nux: string | Optional<Nux>) {
-      const name = typeof nux === "string" ? nux : nux?.name ?? "";
+    getPopupState(popup: string | Optional<Popup>) {
+      const name = typeof popup === "string" ? popup : popup?.name ?? "";
       const state = currentStates.extra[name];
       return {
         name,
-        step: (typeof nux === "object" && nux?.step) || 0,
+        step: (typeof popup === "object" && popup?.step) || 0,
         priority: Infinity,
         ...state,
       };
     },
 
-    setNuxState(nux: string | Optional<Nux>, state: Optional<NuxState>) {
-      const curState = nm.getNuxState(nux);
+    setPopupState(
+      popup: string | Optional<Popup>,
+      state: Optional<PopupState>,
+    ) {
+      const curState = nm.getPopupState(popup);
       currentStates.extra[curState.name] = { ...curState, ...state };
     },
 
-    delNuxState(nux: string | Optional<Nux>) {
-      const name = nm.getNuxState(nux).name;
+    delPopupState(popup: string | Optional<Popup>) {
+      const name = nm.getPopupState(popup).name;
       delete currentStates.extra[name];
     },
 
-    getCurrentNux() {
+    getCurrentPopup() {
       return Object.keys(nm.currentStates.extra)
-        .map(nm.getNuxState)
+        .map(nm.getPopupState)
         .sort((a, b) => a.priority - b.priority)
-        .reduce(function (showNux: Nux | undefined, curNux) {
-          if (showNux) {
-            return showNux;
+        .reduce(function (showPopup: Popup | undefined, curPopup) {
+          if (showPopup) {
+            return showPopup;
           }
-          const nux = nm.resolve(curNux.name, curNux.step);
-          if (nux && nux.enabled) {
-            return nux;
+          const popup = nm.resolve(curPopup.name, curPopup.step);
+          if (popup && popup.enabled) {
+            return popup;
           } else {
             return undefined;
           }

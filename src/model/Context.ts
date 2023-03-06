@@ -1,14 +1,14 @@
 import * as LocalStore from "../utils/localStorage";
 import Obj from "../utils/objects";
 import * as Store from "../utils/store";
-import { genNuxManager, NuxManager } from "./Nux";
+import { genPopupManager, PopupManager } from "./Popup";
 import { genResourceManager, ResourceManager } from "./Resource";
 import { defaultSettings, Settings } from "./Settings";
 
 export type Context<TickResult = any> = {
   settings: Settings;
   resourceManager: ResourceManager<Context<TickResult>, TickResult>;
-  nuxManager: NuxManager<Context<TickResult>>;
+  popupManager: PopupManager<Context<TickResult>>;
 
   init: (this: Context<TickResult>) => void;
   load: () => boolean;
@@ -40,7 +40,7 @@ export function emptyContext<TickResult>(
     lastLoaded: Date.now(),
   };
   context.resourceManager = genResourceManager(context, context.settings);
-  context.nuxManager ??= genNuxManager(context, context.resourceManager);
+  context.popupManager ??= genPopupManager(context, context.resourceManager);
 
   context.init();
   ContextInitializers.forEach((init) => init(context));

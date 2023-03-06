@@ -15,7 +15,7 @@
     flex: 0 1 auto;
   }
 
-  > div:not(#nux-root) {
+  > div:not(#popup-root) {
     flex: 1 1 auto;
     overflow: hidden auto;
   }
