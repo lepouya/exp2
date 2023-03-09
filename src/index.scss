@@ -6,6 +6,7 @@
 
 // Widgets
 @use "styles/BuyButton";
+@use "styles/Grid";
 @use "styles/Icon";
 @use "styles/NavBar";
 @use "styles/Popup";
@@ -18,5 +19,5 @@
 @use "styles/ToggleButton";
 
 // Pages
-@use "styles/Options";
 @use "styles/MineSweeper";
+@use "styles/Options";
