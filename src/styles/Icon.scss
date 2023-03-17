@@ -1,6 +1,17 @@
 @use "./Theme";
 
+.icon-wrapper {
+  display: inline-flex;
+  position: relative;
+
+  align-items: center;
+  justify-content: center;
+}
+
 .icon {
+  display: inline-block;
+  position: relative;
+
   pointer-events: none;
 
   stroke: currentColor;
@@ -15,5 +26,32 @@
   &.icon-gi {
     fill: currentColor;
     stroke-width: 1;
+  }
+}
+
+.icon-badge {
+  display: inline-block;
+  position: absolute;
+
+  text-align: center;
+
+  &-top-left {
+    top: 0;
+    left: 0;
+  }
+
+  &-top-right {
+    top: 0;
+    right: 0;
+  }
+
+  &-bottom-left {
+    bottom: 0;
+    left: 0;
+  }
+
+  &-bottom-right {
+    bottom: 0;
+    right: 0;
   }
 }
