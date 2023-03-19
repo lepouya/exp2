@@ -1,6 +1,6 @@
 import Game from "../components/Game";
 import Grid from "../components/Grid";
-import Icon from "../components/Icon";
+import Icon, { IconBadge } from "../components/Icon";
 import { Context } from "../model/Context";
 
 export default function initGridTest(_context: Context) {
@@ -11,6 +11,9 @@ export default function initGridTest(_context: Context) {
     heading: "Grids Test",
     body: () => (
       <div>
+        <Icon icon="5em #0b7 gi:barn-owl">
+          <IconBadge icon="top-right 1em #b70 ti:chess-knight" />
+        </Icon>
         {shapes.map((shape) => (
           <div className="panel" key={shape}>
             <div className="title-bar">{shape}</div>

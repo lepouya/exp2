@@ -1,7 +1,5 @@
 import { PropsWithChildren } from "react";
 
-import Arr from "../utils/arrays";
-
 export type IconProps = {
   icon: string;
   pack?: string;
@@ -15,67 +13,62 @@ export type IconProps = {
 };
 
 export default function Icon(props: PropsWithChildren<IconProps>) {
-  const icon = autoCompleteIconStyle(props);
-
   return (
     <div className="icon-wrapper">
-      <svg
-        className={icon.className}
-        width={icon.size}
-        height={icon.size}
-        color={icon.color}
-        style={props.style}
-      >
-        <use href={icon.icon} />
-      </svg>
+      {genIconSVG(props)}
       {props.children}
     </div>
   );
 }
 
 export function IconBadge(props: IconProps) {
-  const icon = autoCompleteIconStyle(props);
-  return (
-    <svg
-      className={Arr.className(
-        "icon-badge",
-        `icon-badge-${props.position}`,
-        icon.className,
-      )}
-      width={icon.size}
-      height={icon.size}
-      color={icon.color}
-      style={props.style}
-    >
-      <use href={icon.icon} />
-    </svg>
-  );
+  return genIconSVG(props, "icon-badge");
 }
 
-function autoCompleteIconStyle(iconStyle: IconProps): IconProps {
-  const parts = iconStyle.icon.split(/\s+/).filter((s) => s.trim().length > 0);
-  let pack = iconStyle.pack || "";
-  let icon = parts.pop() ?? iconStyle.icon;
-  let color = parts.pop() ?? iconStyle.color;
+function genIconSVG(
+  { icon, pack, color, size, position, className, style }: IconProps,
+  badgeClass = "",
+) {
+  const parts = icon
+    .split(/\s+/)
+    .filter((s) => s.trim().length > 0)
+    .filter((s) => (s.includes(":") ? !([pack, icon] = s.split(":", 2)) : true))
+    .filter((s) => (/^#[0-9a-f]+$/i.test(s) ? !(color = s) : true))
+    .filter((s) => (/^[-.0-9]+(%|px|em|vh|vw)$/i.test(s) ? !(size = s) : true))
+    .filter((s) =>
+      s === "top-left" ||
+      s === "top-right" ||
+      s === "bottom-left" ||
+      s === "bottom-right"
+        ? !(position = s)
+        : true,
+    );
 
-  if (icon.includes(":")) {
-    [pack, icon] = icon.split(":", 2);
-  }
-
-  const className = [
+  icon = parts.pop() || icon;
+  color = parts.pop() || color;
+  size = parts.pop() || size;
+  position = position || (badgeClass ? "top-right" : undefined);
+  className = [
     "icon",
     pack && `icon-${pack}`,
     icon && `icon-${icon}`,
+    position && `icon-${position}`,
     color && !color.startsWith("#") && color,
-    iconStyle.className,
+    className,
+    badgeClass,
   ]
     .filter(Boolean)
     .join(" ");
 
-  return {
-    icon: `${pack ? `sprites/${pack}.svg` : ""}#${icon}`,
-    color: color?.startsWith("#") ? color : undefined,
-    size: iconStyle.size,
-    className,
-  };
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      color={color?.startsWith("#") ? color : undefined}
+      style={style}
+    >
+      <use href={`${pack ? `sprites/${pack}.svg` : ""}#${icon}`} />
+    </svg>
+  );
 }

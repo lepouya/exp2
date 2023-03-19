@@ -2,6 +2,7 @@
 
 - Submenus
 - Sticky header/footer
+- Icon badges should queue up in corners instead of overlapping
 
 # Things to experiment with
 
@@ -9,7 +10,6 @@
 - Screen glitching
 - Blurry text
 - Prestige
-- Icon badging
 - SCSS inside of component parts
 
 # Issues

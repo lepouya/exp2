@@ -12,6 +12,8 @@
   display: inline-block;
   position: relative;
 
+  text-align: center;
+
   pointer-events: none;
 
   stroke: currentColor;
@@ -27,30 +29,27 @@
     fill: currentColor;
     stroke-width: 1;
   }
-}
 
-.icon-badge {
-  display: inline-block;
-  position: absolute;
+  &.icon-badge {
+    position: absolute;
+  }
 
-  text-align: center;
-
-  &-top-left {
+  &.icon-top-left {
     top: 0;
     left: 0;
   }
 
-  &-top-right {
+  &.icon-top-right {
     top: 0;
     right: 0;
   }
 
-  &-bottom-left {
+  &.icon-bottom-left {
     bottom: 0;
     left: 0;
   }
 
-  &-bottom-right {
+  &.icon-bottom-right {
     bottom: 0;
     right: 0;
   }
