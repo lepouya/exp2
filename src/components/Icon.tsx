@@ -13,6 +13,22 @@ export type IconProps = {
 };
 
 export default function Icon(props: PropsWithChildren<IconProps>) {
+  if (props.icon.includes(";")) {
+    const [mainIcon, ...badgeIcons] = props.icon.split(";");
+    props = {
+      ...props,
+      icon: mainIcon,
+      children: (
+        <>
+          {badgeIcons.map((badgeIcon, idx) => (
+            <IconBadge key={`badge-${idx}`} icon={badgeIcon} />
+          ))}
+          {props.children}
+        </>
+      ),
+    };
+  }
+
   return (
     <div className="icon-wrapper">
       {genIconSVG(props)}
