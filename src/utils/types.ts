@@ -57,6 +57,8 @@ type OptionalArray<T> = T extends [infer Head]
   ? [Optional<Head>]
   : T extends [infer Head, ...infer Rest]
   ? [Optional<Head>, ...OptionalArray<Rest>]
+  : T extends (infer Elem)[]
+  ? Optional<Elem>[]
   : never;
 
 export type Replace<T, From, To> = T extends From
@@ -73,6 +75,8 @@ type ReplaceArray<T, From, To> = T extends [infer Head]
   ? [Replace<Head, From, To>]
   : T extends [infer Head, ...infer Rest]
   ? [Replace<Head, From, To>, ...ReplaceArray<Rest, From, To>]
+  : T extends (infer Elem)[]
+  ? Replace<Elem, From, To>[]
   : never;
 
 export type TypeEquals<One, Two, Then = One, Else = never> = (<

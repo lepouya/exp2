@@ -130,13 +130,15 @@ Format.time = function (time: number, options?: TimeOptions): string {
         : num,
     );
   } else {
-    parts = [
-      [years, "year"],
-      [days, "day"],
-      [hours, "hour"],
-      [mins, "minute"],
-      [secs, "second", years + days + hours + mins === 0, msec],
-    ].map(([num, word, allowZeros = false, fraction = 0]) =>
+    parts = (
+      [
+        [years, "year"],
+        [days, "day"],
+        [hours, "hour"],
+        [mins, "minute"],
+        [secs, "second", years + days + hours + mins === 0, msec],
+      ] as const
+    ).map(([num, word, allowZeros = false, fraction = 0]) =>
       num > 0 || fraction > 0 || (allowZeros && num === 0)
         ? num.toString() +
           (fraction > 0 ? "." + fraction.toString() : "") +

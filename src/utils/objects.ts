@@ -13,7 +13,8 @@ Obj.assign = function <
     key != null &&
     newObj[key] &&
     value != null &&
-    typeof value === "object"
+    typeof value === "object" &&
+    !Array.isArray(value)
   ) {
     newObj[key] = { ...newObj[key], ...value };
   } else if (key != null && value != null) {
